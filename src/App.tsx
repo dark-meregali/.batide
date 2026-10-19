@@ -126,15 +126,15 @@ function ActivityBar() {
   return (
     <nav className="activity-bar">
       <div className="activity-logo"><IconLogo size={22} /></div>
-      <button className={'activity-btn' + on('explorer')} title={t('explorer.title')} disabled={!fs} onClick={() => ws.showSidebar('explorer')}>
+      <button className={'activity-btn' + on('explorer')} title={t('explorer.title')} aria-label={t('explorer.title')} aria-pressed={!!on('explorer')} disabled={!fs} onClick={() => ws.showSidebar('explorer')}>
         <IconFiles size={20} />
       </button>
-      <button className={'activity-btn' + on('git')} title={t('git.title') + ' (Ctrl+Shift+G)'} disabled={!fs} onClick={() => ws.showSidebar('git')}>
+      <button className={'activity-btn' + on('git')} title={t('git.title') + ' (Ctrl+Shift+G)'} aria-label={t('git.title')} aria-pressed={!!on('git')} disabled={!fs} onClick={() => ws.showSidebar('git')}>
         <IconGit size={20} />
         {changes > 0 && <span className="activity-badge">{changes > 99 ? '99+' : changes}</span>}
       </button>
       <div className="spacer" />
-      <button className={'activity-btn' + on('settings')} title={t('settings.title')} onClick={() => ws.showSidebar('settings')}>
+      <button className={'activity-btn' + on('settings')} title={t('settings.title')} aria-label={t('settings.title')} aria-pressed={!!on('settings')} onClick={() => ws.showSidebar('settings')}>
         <IconSettings size={20} />
       </button>
     </nav>
@@ -182,12 +182,30 @@ function TabBar() {
   const active = useWorkspace((s) => s.active)
   const dirty = useWorkspace((s) => s.dirty)
   const ws = useWorkspace.getState()
+  const bar = useRef<HTMLDivElement>(null)
+
+  // Setas movem o foco entre abas; Enter/Espaço ativa (padrão ARIA de tabs).
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const els = [...bar.current!.querySelectorAll<HTMLElement>('[role="tab"]')]
+    const i = els.indexOf(document.activeElement as HTMLElement)
+    if (i < 0) return
+    if (e.key === 'ArrowRight') els[(i + 1) % els.length].focus()
+    else if (e.key === 'ArrowLeft') els[(i - 1 + els.length) % els.length].focus()
+    else if (e.key === 'Enter' || e.key === ' ') ws.setActive(tabs[i].path)
+    else return
+    e.preventDefault()
+  }
+
   return (
-    <div className="tab-bar">
+    <div className="tab-bar" role="tablist" ref={bar} onKeyDown={onKeyDown}>
       {tabs.map((tab) => (
         <div
           key={tab.path}
           className={'tab' + (tab.path === active ? ' active' : '')}
+          role="tab"
+          aria-label={tab.path.startsWith(DIFF_PREFIX) ? `${tab.name} (diff)` : tab.name}
+          aria-selected={tab.path === active}
+          tabIndex={tab.path === active ? 0 : -1}
           onClick={() => ws.setActive(tab.path)}
           onAuxClick={(e) => e.button === 1 && ws.closeTab(tab.path)}
           title={tab.path}
@@ -197,6 +215,8 @@ function TabBar() {
           <button
             className={'tab-close' + (dirty[tab.path] ? ' dirty' : '')}
             title={t('tab.close')}
+            aria-label={`${t('tab.close')} ${tab.name}`}
+            tabIndex={-1}
             onClick={(e) => {
               e.stopPropagation()
               ws.closeTab(tab.path)

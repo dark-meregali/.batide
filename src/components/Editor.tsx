@@ -13,6 +13,7 @@ export default function Editor() {
 
   useEffect(() => {
     const s = useSettings.getState()
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
     const editor = monaco.editor.create(host.current!, {
       model: null,
       theme: 'batide-dark',
@@ -23,9 +24,9 @@ export default function Editor() {
       tabSize: s.tabSize,
       wordWrap: s.wordWrap ? 'on' : 'off',
       minimap: { enabled: s.minimap },
-      smoothScrolling: true,
-      cursorBlinking: 'smooth',
-      cursorSmoothCaretAnimation: 'on',
+      smoothScrolling: !reduceMotion,
+      cursorBlinking: reduceMotion ? 'solid' : 'smooth',
+      cursorSmoothCaretAnimation: reduceMotion ? 'off' : 'on',
       renderLineHighlight: 'all',
       scrollBeyondLastLine: false,
       padding: { top: 12 },

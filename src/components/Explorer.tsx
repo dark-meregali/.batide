@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useWorkspace } from '../store/workspace'
 import { useGit } from '../store/git'
 import { STATUS_COLORS } from './SourceControl'
 import { FileIcon } from './FileIcon'
 import { useT } from '../i18n'
-import type { FsEntry } from '../fs/types'
+import { dirname, type FsEntry } from '../fs/types'
 import {
   IconChevron, IconCollapse, IconClose, IconFilePlus, IconFolderPlus, IconRefresh,
 } from './Icons'
@@ -21,25 +21,104 @@ export function Explorer() {
   const ws = useWorkspace.getState()
   const selected = useWorkspace((s) => s.selected)
   const [menu, setMenu] = useState<Menu | null>(null)
+  const treeRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const rowEl = (path: string) => treeRef.current?.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)
+
+  // Foco acompanha a seleção quando o usuário navega pelo teclado dentro da árvore.
+  useEffect(() => {
+    if (selected && treeRef.current?.contains(document.activeElement)) rowEl(selected)?.focus()
+  }, [selected])
 
   useEffect(() => {
     if (!menu) return
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
     const close = () => setMenu(null)
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
     window.addEventListener('click', close)
     window.addEventListener('blur', close)
-    window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('click', close)
       window.removeEventListener('blur', close)
-      window.removeEventListener('keydown', onKey)
     }
   }, [menu])
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (!selected || e.target instanceof HTMLInputElement) return
-    if (e.key === 'F2') ws.startRename(selected)
-    else if (e.key === 'Delete') ws.deleteEntry(selected)
+  const closeMenu = () => {
+    const path = menu?.entry.path
+    setMenu(null)
+    if (path) requestAnimationFrame(() => rowEl(path)?.focus())
+  }
+
+  const openMenuAt = (entry: FsEntry, x: number, y: number) => {
+    ws.select(entry.path)
+    setMenu({ x, y, entry })
+  }
+
+  const onTreeKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement) return
+    const items = visibleItems()
+    const i = items.findIndex((it) => it.path === selected)
+    const current = items[i]
+    const move = (to: number) => {
+      const next = items[Math.max(0, Math.min(items.length - 1, to))]
+      if (next) ws.select(next.path)
+    }
+    switch (e.key) {
+      case 'ArrowDown':
+        move(i + 1)
+        break
+      case 'ArrowUp':
+        move(i - 1)
+        break
+      case 'Home':
+        move(0)
+        break
+      case 'End':
+        move(items.length - 1)
+        break
+      case 'ArrowRight':
+        if (current?.kind !== 'dir') return
+        if (!useWorkspace.getState().expanded[current.path]) ws.toggleDir(current.path)
+        else move(i + 1)
+        break
+      case 'ArrowLeft':
+        if (!current) return
+        if (current.kind === 'dir' && useWorkspace.getState().expanded[current.path]) ws.toggleDir(current.path)
+        else if (dirname(current.path) !== '/') ws.select(dirname(current.path))
+        break
+      case 'Enter':
+        if (!current) return
+        if (current.kind === 'dir') ws.toggleDir(current.path)
+        else ws.openFile(current.path)
+        break
+      case 'F2':
+        if (current) ws.startRename(current.path)
+        break
+      case 'Delete':
+        if (current) ws.deleteEntry(current.path)
+        break
+      case 'ContextMenu':
+      case 'F10': {
+        if (!current || (e.key === 'F10' && !e.shiftKey)) return
+        const r = rowEl(current.path)!.getBoundingClientRect()
+        openMenuAt(current, r.left + 24, r.bottom)
+        break
+      }
+      default:
+        return
+    }
+    e.preventDefault()
+  }
+
+  const onMenuKeyDown = (e: React.KeyboardEvent) => {
+    const items = [...menuRef.current!.querySelectorAll<HTMLElement>('[role="menuitem"]')]
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    if (e.key === 'ArrowDown') items[(i + 1) % items.length]?.focus()
+    else if (e.key === 'ArrowUp') items[(i - 1 + items.length) % items.length]?.focus()
+    else if (e.key === 'Escape' || e.key === 'Tab') closeMenu()
+    else return
+    e.preventDefault()
+    e.stopPropagation()
   }
 
   const runFromMenu = (fn: () => void) => () => {
@@ -48,7 +127,7 @@ export function Explorer() {
   }
 
   return (
-    <div className="explorer" tabIndex={0} onKeyDown={onKeyDown}>
+    <div className="explorer">
       <div className="sidebar-header">
         <span className="sidebar-title" title={fs.name}>{fs.name}</span>
         <div className="sidebar-actions">
@@ -60,19 +139,33 @@ export function Explorer() {
           <button className="icon-btn" title={t('explorer.close')} aria-label={t('explorer.close')} onClick={() => ws.closeProject()}><IconClose /></button>
         </div>
       </div>
-      <div className="tree" onClick={(e) => e.target === e.currentTarget && ws.select(null)}>
-        <TreeLevel path="/" depth={0} onMenu={(e, entry) => setMenu({ x: e.clientX, y: e.clientY, entry })} />
+      <div
+        ref={treeRef}
+        className="tree"
+        role="tree"
+        aria-label={fs.name}
+        onKeyDown={onTreeKeyDown}
+        onClick={(e) => e.target === e.currentTarget && ws.select(null)}
+      >
+        <TreeLevel path="/" depth={0} onMenu={(e, entry) => openMenuAt(entry, e.clientX, e.clientY)} />
       </div>
       {menu && (
-        <div className="context-menu" role="menu" style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={menuRef}
+          className="context-menu"
+          role="menu"
+          style={{ left: menu.x, top: menu.y }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={onMenuKeyDown}
+        >
           {menu.entry.kind === 'dir' && (
             <>
-              <button role="menuitem" autoFocus onClick={runFromMenu(() => ws.startCreate(menu.entry.path, 'file'))}>{t('explorer.newFile')}</button>
+              <button role="menuitem" onClick={runFromMenu(() => ws.startCreate(menu.entry.path, 'file'))}>{t('explorer.newFile')}</button>
               <button role="menuitem" onClick={runFromMenu(() => ws.startCreate(menu.entry.path, 'dir'))}>{t('explorer.newFolder')}</button>
               <hr />
             </>
           )}
-          <button role="menuitem" autoFocus={menu.entry.kind === 'file'} onClick={runFromMenu(() => ws.startRename(menu.entry.path))}>
+          <button role="menuitem" onClick={runFromMenu(() => ws.startRename(menu.entry.path))}>
             {t('explorer.rename')}<kbd>F2</kbd>
           </button>
           <button role="menuitem" className="danger" onClick={runFromMenu(() => ws.deleteEntry(menu.entry.path))}>
@@ -128,7 +221,21 @@ function TreeEdit({ depth, kind, initial }: { depth: number; kind: 'file' | 'dir
   )
 }
 
-function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMenu: (e: MouseEvent, entry: FsEntry) => void }) {
+/** Itens visíveis da árvore, na ordem da tela (para a navegação por setas). */
+function visibleItems(): FsEntry[] {
+  const { tree, expanded } = useWorkspace.getState()
+  const out: FsEntry[] = []
+  const walk = (dir: string) => {
+    for (const e of tree[dir] ?? []) {
+      out.push(e)
+      if (e.kind === 'dir' && expanded[e.path]) walk(e.path)
+    }
+  }
+  walk('/')
+  return out
+}
+
+function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMenu: (e: React.MouseEvent, entry: FsEntry) => void }) {
   const t = useT()
   const entries = useWorkspace((s) => s.tree[path])
   const expanded = useWorkspace((s) => s.expanded)
@@ -156,6 +263,9 @@ function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMen
     )
   }
 
+  // Roving tabindex: só o item selecionado (ou o primeiro) entra na ordem do Tab.
+  const tabStop = selected && visibleItems().some((e) => e.path === selected) ? selected : useWorkspace.getState().tree['/']?.[0]?.path
+
   return (
     <>
       {creatingHere && <TreeEdit depth={depth} kind={editing.kind} initial="" />}
@@ -175,6 +285,14 @@ function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMen
             <div
               className={cls}
               style={{ paddingLeft: 8 + depth * 12 }}
+              role="treeitem"
+              aria-label={entry.name}
+              aria-level={depth + 1}
+              aria-selected={selected === entry.path}
+              aria-expanded={entry.kind === 'dir' ? open : undefined}
+              tabIndex={entry.path === tabStop ? 0 : -1}
+              data-path={entry.path}
+              onFocus={() => selected !== entry.path && ws.select(entry.path)}
               onClick={() => (entry.kind === 'dir' ? (ws.select(entry.path), ws.toggleDir(entry.path)) : ws.openFile(entry.path))}
               onContextMenu={(e) => {
                 e.preventDefault()
