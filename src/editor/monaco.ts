@@ -231,6 +231,8 @@ editorBridge.disposeModel = (path) => {
   models.delete(path)
 }
 
+editorBridge.save = (path) => saveFile(path)
+
 editorBridge.reloadFromDisk = async (path) => {
   const entry = models.get(path)
   const ws = useWorkspace.getState()

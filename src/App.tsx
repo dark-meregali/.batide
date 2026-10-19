@@ -7,6 +7,7 @@ import { Explorer } from './components/Explorer'
 import { SettingsView } from './components/SettingsView'
 import { Welcome } from './components/Welcome'
 import { FileIcon } from './components/FileIcon'
+import { DialogHost } from './components/DialogHost'
 import { SourceControl } from './components/SourceControl'
 import { BranchPicker, CloneDialog } from './components/GitDialogs'
 import { useGit } from './store/git'
@@ -14,7 +15,7 @@ import { completeLoginFromUrl, useAuth } from './github/auth'
 import { DIFF_PREFIX } from './store/workspace'
 import { t as tr } from './i18n'
 import {
-  IconBranch, IconCheck, IconClose, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings,
+  IconBranch, IconCheck, IconClose, IconFilePlus, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings,
 } from './components/Icons'
 
 const Editor = lazy(() => import('./components/Editor'))
@@ -109,6 +110,7 @@ export default function App() {
       {toast && <div className="toast">{toast}</div>}
       {dialog === 'clone' && <CloneDialog onClose={() => useWorkspace.getState().setDialog(null)} />}
       {dialog === 'branch' && <BranchPicker onClose={() => useWorkspace.getState().setDialog(null)} />}
+      <DialogHost />
     </div>
   )
 }
@@ -208,10 +210,28 @@ function TabBar() {
   )
 }
 
+const MOD = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl'
+
+/** Sem arquivo aberto: o que dá para fazer agora, em vez de uma tela vazia. */
 function EmptyEditor() {
+  const t = useT()
+  const ws = useWorkspace.getState()
   return (
     <div className="empty-editor">
-      <IconLogo size={72} />
+      <IconLogo size={56} />
+      <div className="empty-actions">
+        <button className="welcome-action" onClick={() => ws.startCreate(ws.newEntryTarget(), 'file')}>
+          <IconFilePlus /> {t('explorer.newFile')}
+        </button>
+        <button className="welcome-action" onClick={() => ws.showSidebar('git')}>
+          <IconGit /> {t('git.title')}
+        </button>
+      </div>
+      <dl className="shortcuts">
+        <dt>{t('shortcut.save')}</dt><dd><kbd>{MOD}</kbd><kbd>S</kbd></dd>
+        <dt>{t('shortcut.toggleSidebar')}</dt><dd><kbd>{MOD}</kbd><kbd>B</kbd></dd>
+        <dt>{t('git.title')}</dt><dd><kbd>{MOD}</kbd><kbd>Shift</kbd><kbd>G</kbd></dd>
+      </dl>
     </div>
   )
 }

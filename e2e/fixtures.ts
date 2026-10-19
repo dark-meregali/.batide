@@ -99,6 +99,16 @@ export class FakeGithub {
 }
 
 export const test = base.extend<{ github: FakeGithub }>({
+  // A Batide não usa prompt()/confirm() do navegador: qualquer diálogo nativo reprova o teste.
+  page: async ({ page }, use) => {
+    const native: string[] = []
+    page.on('dialog', (d) => {
+      native.push(`${d.type()}: ${d.message()}`)
+      d.dismiss().catch(() => {})
+    })
+    await use(page)
+    expect(native, 'diálogos nativos do navegador').toEqual([])
+  },
   github: async ({ page }, use) => {
     const gh = new FakeGithub()
     await gh.install(page)
@@ -109,9 +119,27 @@ export const test = base.extend<{ github: FakeGithub }>({
 
 export { expect }
 
-/** Respostas para prompt()/confirm() na ordem em que aparecerem. */
-export function answerDialogs(page: Page, ...answers: string[]) {
-  page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? answers.shift() : undefined))
+/** Diálogo da Batide aberto no momento. */
+export const appDialog = (page: Page) => page.getByRole('dialog')
+
+/** Cria um projeto no navegador pela tela inicial (o nome vai no diálogo da Batide). */
+export async function newProject(page: Page, name: string) {
+  await page.getByText('Novo projeto no navegador').click()
+  await appDialog(page).getByRole('textbox').fill(name)
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.sidebar-title')).toHaveText(name)
+}
+
+/** Cria arquivos na raiz do projeto pela edição inline do explorador. */
+export async function createFiles(page: Page, ...paths: string[]) {
+  for (const path of paths) {
+    await page.locator('.tree').click({ position: { x: 3, y: 3 } }) // limpa a seleção: cria na raiz
+    await page.getByRole('button', { name: 'Novo arquivo' }).first().click()
+    await page.locator('.tree-edit input').fill(path)
+    await page.keyboard.press('Enter')
+    const name = path.split('/').pop()!
+    await expect(page.locator('.tab.active')).toContainText(name)
+  }
 }
 
 /** Digita no editor Monaco visível. */

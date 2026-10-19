@@ -25,6 +25,9 @@ export default function DiffView({ tabPath }: { tabPath: string }) {
     })
     const modifiedEditor = editor.getModifiedEditor()
     modifiedEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveFile(path, modifiedEditor))
+    for (const ed of [modifiedEditor, editor.getOriginalEditor()]) {
+      ed.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyW, () => useWorkspace.getState().closeTab(tabPath))
+    }
     let cancelled = false
     getDiffModels(path)
       .then((models) => {
@@ -37,7 +40,7 @@ export default function DiffView({ tabPath }: { tabPath: string }) {
       editor.setModel(null)
       editor.dispose()
     }
-  }, [path])
+  }, [path, tabPath])
 
   useEffect(() => {
     // Só a fonte muda depois de criado; o resto vem fixo na criação.

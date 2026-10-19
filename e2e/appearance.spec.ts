@@ -1,14 +1,10 @@
-import { test, expect, answerDialogs, typeInEditor } from './fixtures'
+import { test, expect, typeInEditor, newProject, createFiles } from './fixtures'
 import type { Page } from '@playwright/test'
 
 async function newProjectWith(page: Page, ...entries: string[]) {
-  answerDialogs(page, 'visual', ...entries)
   await page.goto('/')
-  await page.getByText('Novo projeto no navegador').click()
-  for (const _ of entries) {
-    await page.locator('.tree').click({ position: { x: 5, y: 5 } }) // limpa a seleção: cria na raiz
-    await page.getByTitle('Novo arquivo').click()
-  }
+  await newProject(page, 'visual')
+  await createFiles(page, ...entries)
 }
 
 const row = (page: Page, name: string) => page.locator('.tree-row', { hasText: new RegExp(`^${name}$`) })
