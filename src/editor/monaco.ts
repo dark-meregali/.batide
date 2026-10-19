@@ -5,7 +5,8 @@ import JsonWorker from 'monaco-editor/language/json/json.worker?worker'
 import CssWorker from 'monaco-editor/language/css/css.worker?worker'
 import HtmlWorker from 'monaco-editor/language/html/html.worker?worker'
 import { PLSQL_EXTENSIONS, registerPlsql } from './plsql'
-import { editorBridge, useWorkspace } from '../store/workspace'
+import { DIFF_PREFIX, editorBridge, useWorkspace } from '../store/workspace'
+import { BrowserFs } from '../fs/browserFs'
 import { useSettings } from '../store/settings'
 import { t } from '../i18n'
 
@@ -181,9 +182,56 @@ function scheduleAutoSave(path: string) {
   autoSaveTimers.set(path, setTimeout(() => saveFile(path), 800))
 }
 
+// ---- Diff (HEAD x arquivo atual) ----
+
+const diffOriginals = new Map<string, monaco.editor.ITextModel>()
+
+/** Modelos para a aba de diff: versão do HEAD (somente leitura) e o arquivo editável. */
+export async function getDiffModels(path: string) {
+  const fs = useWorkspace.getState().fs
+  if (!(fs instanceof BrowserFs)) return null
+  let original = diffOriginals.get(path)
+  if (!original) {
+    const { readHead } = await import('../git/git')
+    const text = await readHead(fs.root, path.slice(1))
+    original = monaco.editor.createModel(text, languageFor(path), monaco.Uri.from({ scheme: 'git', path }))
+    diffOriginals.set(path, original)
+  }
+  // Arquivo apagado: o lado direito fica vazio.
+  const modified = (await fs.exists(path))
+    ? (await getModel(path))!.model
+    : monaco.editor.createModel('', languageFor(path))
+  return { original, modified }
+}
+
 editorBridge.disposeModel = (path) => {
+  if (path.startsWith(DIFF_PREFIX)) {
+    const file = path.slice(DIFF_PREFIX.length)
+    diffOriginals.get(file)?.dispose()
+    diffOriginals.delete(file)
+    // O modelo do arquivo foi criado só para o diff: libera se não houver aba do arquivo.
+    const open = useWorkspace.getState().tabs.some((t) => t.path === file)
+    if (!open && !useWorkspace.getState().dirty[file]) editorBridge.disposeModel?.(file)
+    return
+  }
   models.get(path)?.model.dispose()
   models.delete(path)
+}
+
+editorBridge.reloadFromDisk = async (path) => {
+  const entry = models.get(path)
+  const ws = useWorkspace.getState()
+  if (!entry || !ws.fs || ws.dirty[path]) return
+  if (!(await ws.fs.exists(path))) {
+    ws.closeTab(path)
+    return
+  }
+  const content = await ws.fs.readFile(path)
+  if (content !== entry.model.getValue()) {
+    entry.model.setValue(content)
+    entry.savedVersion = entry.model.getAlternativeVersionId()
+    ws.setDirty(path, false)
+  }
 }
 
 editorBridge.renameModel = (from, to) => {

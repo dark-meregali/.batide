@@ -7,7 +7,8 @@ export interface Tab {
   name: string
 }
 
-export type SidebarView = 'explorer' | 'settings'
+export type SidebarView = 'explorer' | 'git' | 'settings'
+export type Dialog = 'clone' | 'branch' | null
 
 /**
  * Ponte para o módulo do editor (carregado sob demanda), que é dono dos modelos do
@@ -16,7 +17,12 @@ export type SidebarView = 'explorer' | 'settings'
 export const editorBridge: {
   renameModel?: (from: string, to: string) => void
   disposeModel?: (path: string) => void
+  /** Recarrega do disco um arquivo aberto sem alterações (após pull, checkout…). */
+  reloadFromDisk?: (path: string) => Promise<void>
 } = {}
+
+/** Abas de diff usam o prefixo "diff:" antes do caminho do arquivo. */
+export const DIFF_PREFIX = 'diff:'
 
 interface WorkspaceState {
   fs: FsProvider | null
@@ -31,6 +37,7 @@ interface WorkspaceState {
   sidebarVisible: boolean
   sidebarView: SidebarView
   toast: string | null
+  dialog: Dialog
 
   openProject: (fs: FsProvider) => Promise<void>
   closeProject: () => void
@@ -40,6 +47,7 @@ interface WorkspaceState {
   refresh: () => Promise<void>
   select: (path: string | null) => void
   openFile: (path: string) => void
+  openDiff: (path: string) => void
   closeTab: (path: string) => void
   setActive: (path: string) => void
   setDirty: (path: string, dirty: boolean) => void
@@ -49,6 +57,7 @@ interface WorkspaceState {
   showSidebar: (view: SidebarView) => void
   toggleSidebar: () => void
   notify: (msg: string) => void
+  setDialog: (dialog: Dialog) => void
 }
 
 const isUnder = (p: string, dir: string) => p === dir || p.startsWith(dir + '/')
@@ -69,6 +78,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     sidebarVisible: true,
     sidebarView: 'explorer',
     toast: null,
+    dialog: null,
 
     async openProject(fs) {
       get().closeProject()
@@ -85,7 +95,8 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       const fs = get().fs
       if (!fs) return
       try {
-        const entries = await fs.readDir(path)
+        // A pasta .git não aparece no explorador (como no VS Code).
+        const entries = (await fs.readDir(path)).filter((e) => !(path === '/' && e.name === '.git'))
         set((s) => ({ tree: { ...s.tree, [path]: entries } }))
       } catch (e) {
         fail(e)
@@ -122,6 +133,13 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       set({ active: path, selected: path })
     },
 
+    openDiff(path) {
+      const id = DIFF_PREFIX + path
+      const { tabs } = get()
+      if (!tabs.some((t) => t.path === id)) set({ tabs: [...tabs, { path: id, name: basename(path) }] })
+      set({ active: id })
+    },
+
     closeTab(path) {
       const { tabs, active, dirty } = get()
       if (dirty[path] && !confirm(t('confirm.unsaved', { name: basename(path) }))) return
@@ -134,7 +152,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     },
 
     setActive(path) {
-      set({ active: path, selected: path })
+      set({ active: path, selected: path.startsWith(DIFF_PREFIX) ? get().selected : path })
     },
 
     setDirty(path, dirty) {
@@ -215,6 +233,10 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
 
     toggleSidebar() {
       set((s) => ({ sidebarVisible: !s.sidebarVisible }))
+    },
+
+    setDialog(dialog) {
+      set({ dialog })
     },
 
     notify(msg) {

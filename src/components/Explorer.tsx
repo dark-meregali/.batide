@@ -1,5 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { useWorkspace } from '../store/workspace'
+import { useGit } from '../store/git'
+import { STATUS_COLORS } from './SourceControl'
 import { useT } from '../i18n'
 import type { FsEntry } from '../fs/types'
 import {
@@ -83,6 +85,7 @@ function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMen
   const selected = useWorkspace((s) => s.selected)
   const active = useWorkspace((s) => s.active)
   const dirty = useWorkspace((s) => s.dirty)
+  const changes = useGit((s) => s.changes)
   const ws = useWorkspace.getState()
 
   if (!entries) return null
@@ -92,6 +95,11 @@ function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMen
     <>
       {entries.map((entry) => {
         const open = !!expanded[entry.path]
+        const rel = entry.path.slice(1)
+        const change =
+          entry.kind === 'file'
+            ? changes.find((c) => c.file === rel)
+            : changes.find((c) => c.file.startsWith(rel + '/'))
         const cls = ['tree-row', selected === entry.path && 'selected', active === entry.path && 'active'].filter(Boolean).join(' ')
         return (
           <div key={entry.path}>
@@ -111,8 +119,16 @@ function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMen
               ) : (
                 <span className="file-dot" style={{ background: fileColor(entry.name) }} />
               )}
-              <span className={'tree-name' + (entry.kind === 'dir' ? ' dir' : '')}>{entry.name}</span>
+              <span
+                className={'tree-name' + (entry.kind === 'dir' ? ' dir' : '') + (change?.status === 'D' ? ' deleted' : '')}
+                style={change ? { color: STATUS_COLORS[change.status] } : undefined}
+              >
+                {entry.name}
+              </span>
               {dirty[entry.path] && <span className="dirty-dot" />}
+              {change && entry.kind === 'file' && (
+                <span className="tree-status" style={{ color: STATUS_COLORS[change.status] }}>{change.status}</span>
+              )}
             </div>
             {entry.kind === 'dir' && open && <TreeLevel path={entry.path} depth={depth + 1} onMenu={onMenu} />}
           </div>

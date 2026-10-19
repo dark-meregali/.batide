@@ -62,8 +62,8 @@ export function Welcome() {
             <button className="welcome-action" onClick={newProject}>
               <IconPlus /> {t('welcome.newBrowser')}
             </button>
-            <button className="welcome-action" disabled>
-              <IconGit /> {t('welcome.cloneSoon')}
+            <button className="welcome-action" onClick={() => ws.setDialog('clone')}>
+              <IconGit /> {t('welcome.clone')}
             </button>
 
             <h2 className="mt">{t('welcome.recentBrowser')}</h2>
@@ -89,6 +89,7 @@ export function Welcome() {
               <dt>{t('shortcut.format')}</dt><dd><kbd>Shift</kbd><kbd>Alt</kbd><kbd>F</kbd></dd>
               <dt>{t('shortcut.closeTab')}</dt><dd><kbd>Alt</kbd><kbd>W</kbd></dd>
               <dt>{t('shortcut.toggleSidebar')}</dt><dd><kbd>{mod}</kbd><kbd>B</kbd></dd>
+              <dt>{t('git.title')}</dt><dd><kbd>{mod}</kbd><kbd>Shift</kbd><kbd>G</kbd></dd>
               <dt>{t('shortcut.commands')}</dt><dd><kbd>F1</kbd></dd>
             </dl>
           </section>

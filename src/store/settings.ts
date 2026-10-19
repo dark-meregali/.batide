@@ -11,6 +11,8 @@ export interface Settings {
   formatOnSave: boolean
   autoSave: boolean
   sidebarWidth: number
+  /** URL do Cloudflare Worker (login OAuth + proxy do git). */
+  proxyUrl: string
   set: (patch: Partial<Omit<Settings, 'set'>>) => void
 }
 
@@ -27,6 +29,7 @@ export const useSettings = create<Settings>()(
       formatOnSave: false,
       autoSave: false,
       sidebarWidth: 260,
+      proxyUrl: '',
       set: (patch) => set(patch),
     }),
     { name: 'batide.settings' },

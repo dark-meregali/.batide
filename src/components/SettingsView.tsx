@@ -1,5 +1,9 @@
+import { useState } from 'react'
 import { useSettings } from '../store/settings'
 import { useT, type Lang } from '../i18n'
+import { loginWithToken, startLogin, useAuth } from '../github/auth'
+import { useWorkspace } from '../store/workspace'
+import { IconGithub } from './Icons'
 
 export function SettingsView() {
   const t = useT()
@@ -41,7 +45,68 @@ export function SettingsView() {
         {toggle('minimap', t('settings.minimap'))}
         {toggle('formatOnSave', t('settings.formatOnSave'))}
         {toggle('autoSave', t('settings.autoSave'))}
+
+        <div className="settings-section">{t('github.title')}</div>
+        <GithubSettings />
       </div>
     </div>
+  )
+}
+
+function GithubSettings() {
+  const t = useT()
+  const { user, logout } = useAuth()
+  const { proxyUrl, set } = useSettings()
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const submitToken = async () => {
+    setBusy(true)
+    try {
+      await loginWithToken(token.trim())
+      setToken('')
+    } catch (e) {
+      useWorkspace.getState().notify(t('github.loginError', { msg: e instanceof Error ? e.message : String(e) }))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      {user ? (
+        <div className="gh-account">
+          <img src={user.avatar_url} alt="" width={28} height={28} />
+          <div>
+            <div className="muted">{t('github.loggedAs')}</div>
+            <div>{user.login}</div>
+          </div>
+          <button className="btn-secondary small" onClick={logout}>{t('github.logout')}</button>
+        </div>
+      ) : (
+        <>
+          <button className="btn-primary" onClick={startLogin}>
+            <IconGithub size={14} /> {t('github.login')}
+          </button>
+          <label className="setting-col">
+            <span>{t('github.token')}</span>
+            <div className="input-row">
+              <input type="password" value={token} placeholder={t('github.tokenPlaceholder')} onChange={(e) => setToken(e.target.value)} />
+              <button className="btn-secondary small" disabled={!token.trim() || busy} onClick={submitToken}>{t('github.tokenSave')}</button>
+            </div>
+          </label>
+        </>
+      )}
+      <label className="setting-col">
+        <span>{t('github.proxy')}</span>
+        <input
+          type="url"
+          value={proxyUrl}
+          placeholder={import.meta.env.VITE_PROXY_URL || 'https://batide-auth.<you>.workers.dev'}
+          onChange={(e) => set({ proxyUrl: e.target.value.trim() })}
+        />
+        <small className="muted">{t('github.proxyHint')}</small>
+      </label>
+    </>
   )
 }

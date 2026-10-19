@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { monaco, getModel, saveFile, saveViewState, languageLabel } from '../editor/monaco'
-import { useWorkspace } from '../store/workspace'
+import { DIFF_PREFIX, useWorkspace } from '../store/workspace'
 import { useSettings } from '../store/settings'
 
 /** Carregado sob demanda (React.lazy): o Monaco só baixa quando o primeiro arquivo abre. */
@@ -57,7 +57,7 @@ export default function Editor() {
   // Troca de arquivo: salva a posição/rolagem do anterior e restaura a do novo.
   useEffect(() => {
     const editor = editorRef.current
-    if (!editor) return
+    if (!editor || active?.startsWith(DIFF_PREFIX)) return
     let cancelled = false
     if (shownPath.current) saveViewState(shownPath.current, editor.saveViewState())
     if (!active) {
@@ -93,5 +93,5 @@ export default function Editor() {
     editorRef.current?.getModel()?.updateOptions({ tabSize: settings.tabSize })
   }, [settings.fontSize, settings.wordWrap, settings.minimap, settings.tabSize])
 
-  return <div ref={host} className="editor-host" />
+  return <div ref={host} className="editor-host" hidden={!!active?.startsWith(DIFF_PREFIX)} />
 }

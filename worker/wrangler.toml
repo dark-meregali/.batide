@@ -1,0 +1,11 @@
+name = "batide-auth"
+main = "index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+GITHUB_CLIENT_ID = "Ov23lieSJoRLk2tDkKDa"
+# Origens que podem usar o Worker: GitHub Pages, desenvolvimento local e o app Tauri.
+ALLOWED_ORIGINS = "https://dark-meregali.github.io,http://localhost:5173,http://localhost:4173,tauri://localhost,http://tauri.localhost"
+
+# O client secret NÃO fica aqui. Configure com:
+#   npx wrangler secret put GITHUB_CLIENT_SECRET

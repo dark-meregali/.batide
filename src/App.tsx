@@ -6,9 +6,18 @@ import { useT } from './i18n'
 import { Explorer } from './components/Explorer'
 import { SettingsView } from './components/SettingsView'
 import { Welcome } from './components/Welcome'
-import { IconCheck, IconClose, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings, fileColor } from './components/Icons'
+import { SourceControl } from './components/SourceControl'
+import { BranchPicker, CloneDialog } from './components/GitDialogs'
+import { useGit } from './store/git'
+import { completeLoginFromUrl, useAuth } from './github/auth'
+import { DIFF_PREFIX } from './store/workspace'
+import { t as tr } from './i18n'
+import {
+  IconBranch, IconCheck, IconClose, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings, fileColor,
+} from './components/Icons'
 
 const Editor = lazy(() => import('./components/Editor'))
+const DiffView = lazy(() => import('./components/DiffView'))
 
 export default function App() {
   const fs = useWorkspace((s) => s.fs)
@@ -16,7 +25,21 @@ export default function App() {
   const sidebarView = useWorkspace((s) => s.sidebarView)
   const tabs = useWorkspace((s) => s.tabs)
   const toast = useWorkspace((s) => s.toast)
+  const dialog = useWorkspace((s) => s.dialog)
+  const active = useWorkspace((s) => s.active)
   const lang = useSettings((s) => s.lang)
+
+  // Volta do login no GitHub (?code=…): troca o code por um token.
+  useEffect(() => {
+    completeLoginFromUrl()
+      .then((result) => {
+        if (!result) return
+        const ws = useWorkspace.getState()
+        if ('error' in result) ws.notify(tr('github.loginError', { msg: result.error }))
+        else ws.notify(tr('github.loginOk', { login: useAuth.getState().user?.login ?? '' }))
+      })
+      .catch((e) => useWorkspace.getState().notify(tr('github.loginError', { msg: String(e?.message ?? e) })))
+  }, [])
 
   useEffect(() => {
     document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
@@ -26,7 +49,10 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
       const ws = useWorkspace.getState()
-      if (mod && e.key.toLowerCase() === 'b') {
+      if (mod && e.shiftKey && e.key.toLowerCase() === 'g') {
+        e.preventDefault()
+        if (ws.fs) ws.showSidebar('git')
+      } else if (mod && e.key.toLowerCase() === 'b') {
         e.preventDefault()
         ws.toggleSidebar()
       } else if (e.altKey && e.key.toLowerCase() === 'w' && ws.active) {
@@ -52,7 +78,15 @@ export default function App() {
       <div className="main">
         <ActivityBar />
         {sidebarVisible && (fs || sidebarView === 'settings') && (
-          <Sidebar>{sidebarView === 'settings' ? <SettingsView /> : fs && <Explorer />}</Sidebar>
+          <Sidebar>
+            {sidebarView === 'settings' ? (
+              <SettingsView />
+            ) : sidebarView === 'git' ? (
+              fs && <SourceControl onPickBranch={() => useWorkspace.getState().setDialog('branch')} />
+            ) : (
+              fs && <Explorer />
+            )}
+          </Sidebar>
         )}
         <div className="workbench">
           {fs && tabs.length > 0 ? (
@@ -60,6 +94,7 @@ export default function App() {
               <TabBar />
               <Suspense fallback={<div className="editor-loading" />}>
                 <Editor />
+                {active?.startsWith(DIFF_PREFIX) && <DiffView key={active} tabPath={active} />}
               </Suspense>
             </>
           ) : fs ? (
@@ -71,6 +106,8 @@ export default function App() {
       </div>
       <StatusBar />
       {toast && <div className="toast">{toast}</div>}
+      {dialog === 'clone' && <CloneDialog onClose={() => useWorkspace.getState().setDialog(null)} />}
+      {dialog === 'branch' && <BranchPicker onClose={() => useWorkspace.getState().setDialog(null)} />}
     </div>
   )
 }
@@ -80,6 +117,7 @@ function ActivityBar() {
   const fs = useWorkspace((s) => s.fs)
   const view = useWorkspace((s) => s.sidebarView)
   const visible = useWorkspace((s) => s.sidebarVisible)
+  const changes = useGit((s) => s.changes.length)
   const ws = useWorkspace.getState()
   const on = (v: string) => (visible && view === v && (fs || v === 'settings') ? ' on' : '')
   return (
@@ -88,8 +126,9 @@ function ActivityBar() {
       <button className={'activity-btn' + on('explorer')} title={t('explorer.title')} disabled={!fs} onClick={() => ws.showSidebar('explorer')}>
         <IconFiles size={20} />
       </button>
-      <button className="activity-btn" title={t('welcome.cloneSoon')} disabled>
+      <button className={'activity-btn' + on('git')} title={t('git.title') + ' (Ctrl+Shift+G)'} disabled={!fs} onClick={() => ws.showSidebar('git')}>
         <IconGit size={20} />
+        {changes > 0 && <span className="activity-badge">{changes > 99 ? '99+' : changes}</span>}
       </button>
       <div className="spacer" />
       <button className={'activity-btn' + on('settings')} title={t('settings.title')} onClick={() => ws.showSidebar('settings')}>
@@ -182,6 +221,9 @@ function StatusBar() {
   const active = useWorkspace((s) => s.active)
   const cursor = useWorkspace((s) => s.cursor)
   const language = useWorkspace((s) => s.activeLanguage)
+  const isRepo = useGit((s) => s.isRepo)
+  const branch = useGit((s) => s.branch)
+  const busy = useGit((s) => !!s.busy)
   const { set, lang } = useSettings()
   const [offlineReady, setOfflineReady] = useState(false)
 
@@ -194,6 +236,13 @@ function StatusBar() {
           {fs.kind === 'local' ? <IconLaptop size={13} /> : <IconGlobe size={13} />}
           {fs.name} · {t(fs.kind === 'local' ? 'status.local' : 'status.browser')}
         </span>
+      )}
+      {isRepo && (
+        <button className="status-item status-btn" onClick={() => useWorkspace.getState().setDialog('branch')}>
+          <IconBranch size={13} />
+          {branch ?? 'HEAD'}
+          {busy && ' ⟳'}
+        </button>
       )}
       <div className="spacer" />
       {offlineReady && (

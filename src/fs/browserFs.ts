@@ -45,7 +45,7 @@ async function removeRecursive(abs: string) {
 
 export class BrowserFs implements FsProvider {
   kind = 'browser' as const
-  private root: string
+  readonly root: string
 
   constructor(public name: string) {
     this.root = `${PROJECTS_DIR}/${name}`
