@@ -1,0 +1,97 @@
+import { useEffect, useRef } from 'react'
+import { monaco, getModel, saveFile, saveViewState, languageLabel } from '../editor/monaco'
+import { useWorkspace } from '../store/workspace'
+import { useSettings } from '../store/settings'
+
+/** Carregado sob demanda (React.lazy): o Monaco só baixa quando o primeiro arquivo abre. */
+export default function Editor() {
+  const host = useRef<HTMLDivElement>(null)
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+  const shownPath = useRef<string | null>(null)
+  const active = useWorkspace((s) => s.active)
+  const settings = useSettings()
+
+  useEffect(() => {
+    const s = useSettings.getState()
+    const editor = monaco.editor.create(host.current!, {
+      model: null,
+      theme: 'batide-dark',
+      automaticLayout: true,
+      fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace",
+      fontLigatures: true,
+      fontSize: s.fontSize,
+      tabSize: s.tabSize,
+      wordWrap: s.wordWrap ? 'on' : 'off',
+      minimap: { enabled: s.minimap },
+      smoothScrolling: true,
+      cursorBlinking: 'smooth',
+      cursorSmoothCaretAnimation: 'on',
+      renderLineHighlight: 'all',
+      scrollBeyondLastLine: false,
+      padding: { top: 12 },
+      bracketPairColorization: { enabled: true },
+      guides: { bracketPairs: 'active', indentation: true },
+      stickyScroll: { enabled: true },
+      scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10, useShadows: false },
+      overviewRulerBorder: false,
+    })
+    editorRef.current = editor
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      const path = shownPath.current
+      if (path) saveFile(path, editor)
+    })
+    // No Linux o padrão do Monaco é Ctrl+Shift+I; usamos o mesmo atalho em todo lugar.
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
+      editor.getAction('editor.action.formatDocument')?.run()
+    })
+    editor.onDidChangeCursorPosition((e) =>
+      useWorkspace.setState({ cursor: { line: e.position.lineNumber, col: e.position.column } }),
+    )
+    return () => {
+      if (shownPath.current) saveViewState(shownPath.current, editor.saveViewState())
+      editor.dispose()
+    }
+  }, [])
+
+  // Troca de arquivo: salva a posição/rolagem do anterior e restaura a do novo.
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    let cancelled = false
+    if (shownPath.current) saveViewState(shownPath.current, editor.saveViewState())
+    if (!active) {
+      shownPath.current = null
+      editor.setModel(null)
+      return
+    }
+    getModel(active)
+      .then((entry) => {
+        if (cancelled || !entry) return
+        shownPath.current = active
+        editor.setModel(entry.model)
+        if (entry.viewState) editor.restoreViewState(entry.viewState)
+        const pos = editor.getPosition()
+        useWorkspace.setState({
+          activeLanguage: languageLabel(entry.model.getLanguageId()),
+          cursor: { line: pos?.lineNumber ?? 1, col: pos?.column ?? 1 },
+        })
+        editor.focus()
+      })
+      .catch((e) => useWorkspace.getState().notify(String(e?.message ?? e)))
+    return () => {
+      cancelled = true
+    }
+  }, [active])
+
+  useEffect(() => {
+    editorRef.current?.updateOptions({
+      fontSize: settings.fontSize,
+      wordWrap: settings.wordWrap ? 'on' : 'off',
+      minimap: { enabled: settings.minimap },
+    })
+    editorRef.current?.getModel()?.updateOptions({ tabSize: settings.tabSize })
+  }, [settings.fontSize, settings.wordWrap, settings.minimap, settings.tabSize])
+
+  return <div ref={host} className="editor-host" />
+}
