@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSettings } from '../store/settings'
 import { useT, type Lang } from '../i18n'
-import { loginWithToken, startLogin, useAuth } from '../github/auth'
+import { DEFAULT_PROXY_URL, loginWithToken, startLogin, useAuth } from '../github/auth'
 import { useWorkspace } from '../store/workspace'
 import { IconGithub } from './Icons'
 
@@ -102,7 +102,7 @@ function GithubSettings() {
         <input
           type="url"
           value={proxyUrl}
-          placeholder={import.meta.env.VITE_PROXY_URL || 'https://batide-auth.<you>.workers.dev'}
+          placeholder={import.meta.env.VITE_PROXY_URL || DEFAULT_PROXY_URL}
           onChange={(e) => set({ proxyUrl: e.target.value.trim() })}
         />
         <small className="muted">{t('github.proxyHint')}</small>

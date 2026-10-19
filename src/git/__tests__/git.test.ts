@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import iso from 'isomorphic-git'
 import { lfs, createBrowserProject, PROJECTS_DIR } from '../../fs/browserFs'
 import * as git from '../git'
@@ -214,8 +214,16 @@ describe('githubSlug', () => {
 })
 
 describe('operações remotas', () => {
-  it('exigem o servidor (Worker) configurado', async () => {
-    await expect(git.push(dir, 'main')).rejects.toThrow(/Cloudflare Worker/)
+  it('passam pelo proxy (Worker) configurado', async () => {
+    useSettings.setState({ proxyUrl: 'https://proxy.example/' })
+    await iso.addRemote({ fs: lfs, dir, remote: 'origin', url: 'https://github.com/octo/repo.git' })
+    const fetchMock = vi.fn(async () => new Response('erro', { status: 500 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(git.push(dir, 'main')).rejects.toThrow()
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toBe(
+      'https://proxy.example/github.com/octo/repo.git/info/refs?service=git-receive-pack',
+    )
+    vi.unstubAllGlobals()
   })
 
   it('clone que falha não deixa projeto pela metade', async () => {

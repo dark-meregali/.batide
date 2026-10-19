@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { QuickPick, type PickItem } from './QuickPick'
 import { useT } from '../i18n'
-import { useAuth, startLogin, proxyUrl } from '../github/auth'
+import { useAuth, startLogin } from '../github/auth'
 import { useGit } from '../store/git'
 import { useWorkspace } from '../store/workspace'
 import { BrowserFs, listBrowserProjects } from '../fs/browserFs'
@@ -56,7 +56,6 @@ export function CloneDialog({ onClose }: { onClose: () => void }) {
   }, [token])
 
   const clone = async (url: string, baseName: string) => {
-    if (!proxyUrl()) return useWorkspace.getState().notify(t('git.needProxy'))
     const existing = await listBrowserProjects()
     let name = baseName
     for (let i = 2; existing.includes(name); i++) name = `${baseName}-${i}`

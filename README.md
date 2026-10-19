@@ -61,7 +61,8 @@ npx wrangler secret put GITHUB_CLIENT_SECRET   # cole o client secret do OAuth A
 npx wrangler deploy                            # mostra a URL: https://batide-auth.<você>.workers.dev
 ```
 
-Depois coloque essa URL em *Configurações → GitHub → Servidor* (ou na variável `VITE_PROXY_URL` do build).
+O Worker oficial já está publicado em `https://batide-auth.nhrk9bmtbk.workers.dev` e é o padrão da IDE.
+Para usar outro, troque em *Configurações → GitHub → Servidor* (ou na variável `VITE_PROXY_URL` do build).
 
 Cada push na `main` publica a versão web no GitHub Pages
 (ative em *Settings → Pages → Source: GitHub Actions*).

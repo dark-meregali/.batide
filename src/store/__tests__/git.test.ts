@@ -112,9 +112,10 @@ describe('branches', () => {
 })
 
 describe('operações remotas', () => {
-  it('push sem servidor configurado mostra o erro e libera o estado ocupado', async () => {
+  it('push que falha mostra o erro e libera o estado ocupado', async () => {
+    // Repositório sem remoto "origin": o push falha.
     await g().push()
-    expect(ws().toast).toMatch(/Worker/)
+    expect(ws().toast).toMatch(/remote/i)
     expect(g().busy).toBeNull()
   })
 

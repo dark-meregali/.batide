@@ -20,11 +20,7 @@ const onAuth: AuthCallback = () => {
   const token = useAuth.getState().token
   return token ? { username: token, password: 'x-oauth-basic' } : { cancel: true }
 }
-const remoteOpts = () => {
-  const corsProxy = proxyUrl()
-  if (!corsProxy) throw new Error('Configure o servidor (Cloudflare Worker) em Configurações → GitHub.')
-  return { http, corsProxy, onAuth }
-}
+const remoteOpts = () => ({ http, corsProxy: proxyUrl(), onAuth })
 
 export const isRepo = (dir: string) =>
   fs.promises.stat(`${dir}/.git`).then(

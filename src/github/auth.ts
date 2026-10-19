@@ -1,8 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useSettings } from '../store/settings'
-import { useWorkspace } from '../store/workspace'
-import { t } from '../i18n'
 
 export const GITHUB_CLIENT_ID = 'Ov23lieSJoRLk2tDkKDa'
 const SCOPES = 'repo read:user user:email'
@@ -34,17 +32,17 @@ export const useAuth = create<AuthState>()(
   ),
 )
 
-export const proxyUrl = () => (useSettings.getState().proxyUrl || import.meta.env.VITE_PROXY_URL || '').replace(/\/+$/, '')
+/** Worker publicado (login OAuth + proxy do git). Pode ser trocado em Configurações ou por VITE_PROXY_URL. */
+export const DEFAULT_PROXY_URL = 'https://batide-auth.nhrk9bmtbk.workers.dev'
+
+export const proxyUrl = () =>
+  (useSettings.getState().proxyUrl || import.meta.env.VITE_PROXY_URL || DEFAULT_PROXY_URL).replace(/\/+$/, '')
 
 /** Para onde o GitHub devolve depois do login: a própria página, sem query. */
 const redirectUri = () => location.origin + location.pathname
 
 /** Inicia o login OAuth (fluxo web): redireciona para o GitHub. */
 export function startLogin() {
-  if (!proxyUrl()) {
-    useWorkspace.getState().notify(t('git.needProxy'))
-    return
-  }
   const state = crypto.randomUUID()
   sessionStorage.setItem('batide.oauthState', state)
   const params = new URLSearchParams({

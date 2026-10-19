@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { completeLoginFromUrl, commitAuthor, startLogin, useAuth, GITHUB_CLIENT_ID, proxyUrl } from '../auth'
 import { normalizeRepoUrl } from '../url'
 import { useSettings } from '../../store/settings'
-import { useWorkspace } from '../../store/workspace'
 
 const user = { login: 'octo', name: 'Octo', id: 7, email: 'octo@example.com', avatar_url: '' }
 
 function setUrl(search: string) {
   history.replaceState(null, '', '/app/' + search)
 }
+
+afterEach(() => vi.unstubAllGlobals())
 
 beforeEach(() => {
   useAuth.setState({ token: null, user: null })
@@ -21,6 +22,11 @@ beforeEach(() => {
 describe('proxyUrl', () => {
   it('remove a barra final', () => {
     expect(proxyUrl()).toBe('https://proxy.example')
+  })
+
+  it('usa o Worker oficial quando nada foi configurado', () => {
+    useSettings.setState({ proxyUrl: '' })
+    expect(proxyUrl()).toBe('https://batide-auth.nhrk9bmtbk.workers.dev')
   })
 })
 
@@ -35,17 +41,6 @@ describe('startLogin', () => {
     expect(url.searchParams.get('scope')).toContain('repo')
     expect(url.searchParams.get('redirect_uri')).toBe(location.origin + '/app/')
     expect(url.searchParams.get('state')).toBe(sessionStorage.getItem('batide.oauthState'))
-    vi.unstubAllGlobals()
-  })
-
-  it('avisa e não redireciona sem servidor configurado', () => {
-    useSettings.setState({ proxyUrl: '' })
-    const assign = vi.fn()
-    vi.stubGlobal('location', { ...location, set href(v: string) { assign(v) } })
-    startLogin()
-    expect(assign).not.toHaveBeenCalled()
-    expect(useWorkspace.getState().toast).toMatch(/Worker/)
-    vi.unstubAllGlobals()
   })
 })
 
@@ -68,7 +63,6 @@ describe('completeLoginFromUrl', () => {
     expect(useAuth.getState()).toMatchObject({ token: 'tok', user: { login: 'octo' } })
     expect(location.search).toBe('')
     expect(JSON.parse(fetchMock.mock.calls[0][1]!.body as string)).toEqual({ code: 'abc' })
-    vi.unstubAllGlobals()
   })
 
   it('recusa state diferente (proteção contra CSRF)', async () => {
@@ -79,7 +73,6 @@ describe('completeLoginFromUrl', () => {
     expect(await completeLoginFromUrl()).toEqual({ error: expect.any(String) })
     expect(fetchMock).not.toHaveBeenCalled()
     expect(useAuth.getState().token).toBeNull()
-    vi.unstubAllGlobals()
   })
 
   it('repassa o erro quando o usuário cancela no GitHub', async () => {
@@ -92,7 +85,6 @@ describe('completeLoginFromUrl', () => {
     setUrl('?code=abc&state=s1')
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: 'bad_verification_code', description: 'expirou' }, { status: 400 })))
     expect(await completeLoginFromUrl()).toEqual({ error: 'expirou' })
-    vi.unstubAllGlobals()
   })
 })
 
