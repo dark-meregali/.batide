@@ -170,13 +170,15 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
         if (await fs.exists(path)) return get().notify(t('error.exists'))
         // Permite "pasta/sub/arquivo.ts": cria as pastas intermediárias.
         const parts = name.split('/').filter(Boolean)
+        const parents = [dir] // pastas a abrir no explorador para revelar o item criado
         let cur = dir
         for (const part of parts.slice(0, kind === 'file' ? -1 : undefined)) {
           cur = joinPath(cur, part)
           if (!(await fs.exists(cur))) await fs.mkdir(cur)
+          if (cur !== path) parents.push(cur)
         }
         if (kind === 'file') await fs.writeFile(path, '')
-        set((s) => ({ expanded: { ...s.expanded, [dir]: true } }))
+        set((s) => ({ expanded: { ...s.expanded, ...Object.fromEntries(parents.map((p) => [p, true])) } }))
         await get().refresh()
         if (kind === 'file') get().openFile(path)
         else get().select(path)

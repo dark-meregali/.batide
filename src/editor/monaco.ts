@@ -5,6 +5,9 @@ import JsonWorker from 'monaco-editor/language/json/json.worker?worker'
 import CssWorker from 'monaco-editor/language/css/css.worker?worker'
 import HtmlWorker from 'monaco-editor/language/html/html.worker?worker'
 import { PLSQL_EXTENSIONS, registerPlsql } from './plsql'
+import { withFunctionTokens } from './functionTokens'
+// Fonte cursiva dos tokens em itálico (nomes de função, comentários). Mesma largura da JetBrains Mono.
+import '@fontsource/victor-mono/500-italic.css'
 import { DIFF_PREFIX, editorBridge, useWorkspace } from '../store/workspace'
 import { BrowserFs } from '../fs/browserFs'
 import { useSettings } from '../store/settings'
@@ -22,6 +25,15 @@ self.MonacoEnvironment = {
 }
 
 registerPlsql(monaco)
+
+// Nomes de função em TS/JS: substitui a fábrica de tokenizador do Monaco (registrada no import)
+// pela nossa, antes de qualquer arquivo abrir. Sem corrida com o carregamento sob demanda.
+monaco.languages.registerTokensProviderFactory('typescript', {
+  create: async () => withFunctionTokens((await import('monaco-editor/languages/definitions/typescript/typescript')).language),
+})
+monaco.languages.registerTokensProviderFactory('javascript', {
+  create: async () => withFunctionTokens((await import('monaco-editor/languages/definitions/javascript/javascript')).language),
+})
 
 // Projetos web costumam usar JSX e módulos ES modernos.
 const tsDefaults = monaco.typescript.typescriptDefaults
@@ -51,6 +63,7 @@ monaco.editor.defineTheme('batide-dark', {
     { token: 'type', foreground: '4fd1c5' },
     { token: 'type.identifier', foreground: '4fd1c5' },
     { token: 'predefined', foreground: '7cc4ff' },
+    { token: 'function', foreground: '89b4fa', fontStyle: 'italic' },
     { token: 'string', foreground: 'a6d189' },
     { token: 'string.escape', foreground: 'e5c890' },
     { token: 'number', foreground: 'f2a971' },

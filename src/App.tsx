@@ -6,6 +6,7 @@ import { useT } from './i18n'
 import { Explorer } from './components/Explorer'
 import { SettingsView } from './components/SettingsView'
 import { Welcome } from './components/Welcome'
+import { FileIcon } from './components/FileIcon'
 import { SourceControl } from './components/SourceControl'
 import { BranchPicker, CloneDialog } from './components/GitDialogs'
 import { useGit } from './store/git'
@@ -13,7 +14,7 @@ import { completeLoginFromUrl, useAuth } from './github/auth'
 import { DIFF_PREFIX } from './store/workspace'
 import { t as tr } from './i18n'
 import {
-  IconBranch, IconCheck, IconClose, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings, fileColor,
+  IconBranch, IconCheck, IconClose, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings,
 } from './components/Icons'
 
 const Editor = lazy(() => import('./components/Editor'))
@@ -189,7 +190,7 @@ function TabBar() {
           onAuxClick={(e) => e.button === 1 && ws.closeTab(tab.path)}
           title={tab.path}
         >
-          <span className="file-dot" style={{ background: fileColor(tab.name) }} />
+          <FileIcon name={tab.name} kind="file" />
           <span className="tab-name">{tab.name}</span>
           <button
             className={'tab-close' + (dirty[tab.path] ? ' dirty' : '')}

@@ -88,6 +88,13 @@ describe('createEntry', () => {
     expect(await fs.exists('/a/b/c.sql')).toBe(true)
   })
 
+  it('revela o arquivo criado: abre as pastas intermediárias no explorador', async () => {
+    answer('a/b/c.sql')
+    await ws().createEntry('/', 'file')
+    expect(ws().expanded).toMatchObject({ '/a': true, '/a/b': true })
+    expect(ws().tree['/a/b'].map((e) => e.name)).toEqual(['c.sql'])
+  })
+
   it('não sobrescreve item existente', async () => {
     answer('README.md')
     await ws().createEntry('/', 'file')

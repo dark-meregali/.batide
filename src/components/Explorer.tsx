@@ -2,10 +2,11 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import { useWorkspace } from '../store/workspace'
 import { useGit } from '../store/git'
 import { STATUS_COLORS } from './SourceControl'
+import { FileIcon } from './FileIcon'
 import { useT } from '../i18n'
 import type { FsEntry } from '../fs/types'
 import {
-  IconChevron, IconCollapse, IconClose, IconFilePlus, IconFolderPlus, IconRefresh, fileColor,
+  IconChevron, IconCollapse, IconClose, IconFilePlus, IconFolderPlus, IconRefresh,
 } from './Icons'
 
 interface Menu {
@@ -117,8 +118,9 @@ function TreeLevel({ path, depth, onMenu }: { path: string; depth: number; onMen
               {entry.kind === 'dir' ? (
                 <IconChevron size={14} className={'chevron' + (open ? ' open' : '')} />
               ) : (
-                <span className="file-dot" style={{ background: fileColor(entry.name) }} />
+                <span className="chevron-space" />
               )}
+              <FileIcon name={entry.name} kind={entry.kind} open={open} />
               <span
                 className={'tree-name' + (entry.kind === 'dir' ? ' dir' : '') + (change?.status === 'D' ? ' deleted' : '')}
                 style={change ? { color: STATUS_COLORS[change.status] } : undefined}
