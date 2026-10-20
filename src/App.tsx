@@ -288,7 +288,7 @@ function StatusBar() {
       <div className="spacer" />
       {offlineReady && (
         <span className="status-item muted" title={t('status.offlineReady')}>
-          <IconCheck size={13} /> offline
+          <IconCheck size={13} /> {t('status.offlineReadyShort')}
         </span>
       )}
       {active && (

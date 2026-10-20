@@ -58,7 +58,7 @@ monaco.editor.defineTheme('batide-dark', {
   inherit: true,
   rules: [
     { token: '', foreground: 'd6d7dd' },
-    { token: 'comment', foreground: '5f6373', fontStyle: 'italic' },
+    { token: 'comment', foreground: '80849a', fontStyle: 'italic' },
     { token: 'keyword', foreground: 'a99bff' },
     { token: 'type', foreground: '4fd1c5' },
     { token: 'type.identifier', foreground: '4fd1c5' },
@@ -78,7 +78,7 @@ monaco.editor.defineTheme('batide-dark', {
   colors: {
     'editor.background': '#0e0f13',
     'editor.foreground': '#d6d7dd',
-    'editorLineNumber.foreground': '#3a3d4a',
+    'editorLineNumber.foreground': '#62667a',
     'editorLineNumber.activeForeground': '#9a9db0',
     'editor.lineHighlightBackground': '#16171d',
     'editor.lineHighlightBorder': '#00000000',

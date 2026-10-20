@@ -7,9 +7,11 @@
   --border: #1f2028;
   --border-strong: #2a2c37;
   --text: #d6d7dd;
-  --text-dim: #8b8e9e;
-  --text-faint: #5f6373;
+  --text-dim: #a2a5b4;
+  --text-faint: #80849a;
   --accent: #8b7cff;
+  /* Fundo de botão com texto branco: o violeta da marca escurecido até 5:1. */
+  --accent-strong: #6a58e6;
   --accent-2: #4fd1c5;
   --danger: #f2788d;
   --radius: 8px;
@@ -401,7 +403,7 @@ kbd {
   font-weight: 500;
   transition: filter 0.12s, background 0.12s;
 }
-.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary { background: var(--accent-strong); color: #fff; }
 .btn-primary:not(:disabled):hover { filter: brightness(1.1); }
 .btn-secondary { background: var(--bg-hover); border: 1px solid var(--border-strong); }
 .btn-secondary:not(:disabled):hover { background: var(--bg-active); }
@@ -420,7 +422,7 @@ kbd {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
   font-size: 10px;
   font-weight: 600;
@@ -620,3 +622,6 @@ kbd {
     scroll-behavior: auto !important;
   }
 }
+
+/* Placeholders no cinza do tema (o padrão do navegador some no fundo escuro). */
+::placeholder { color: var(--text-faint); opacity: 1; }

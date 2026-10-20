@@ -3,6 +3,17 @@ import type { Page } from '@playwright/test'
 
 const closeProjectButton = (page: Page) => page.getByRole('button', { name: 'Fechar projeto' })
 
+test('Enter no diálogo confirma uma vez só (não reabre o diálogo pelo botão que recebe o foco)', async ({ page }) => {
+  await page.goto('/')
+  await page.waitForTimeout(800) // tela inicial já carregada: o botão de origem está pronto para receber o foco
+  await page.getByText('Novo projeto no navegador').click()
+  await appDialog(page).getByRole('textbox').fill('enter-unico')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.sidebar-title')).toHaveText('enter-unico')
+  await page.waitForTimeout(300)
+  await expect(appDialog(page)).toHaveCount(0)
+})
+
 test.describe('fechar projeto com alterações não salvas', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')

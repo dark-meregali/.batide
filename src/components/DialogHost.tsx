@@ -24,7 +24,14 @@ function DialogView() {
       box.current!.querySelector<HTMLElement>(req.kind === 'confirm' && req.danger ? '[data-cancel]' : '[data-primary]')
     target?.focus()
     if (target instanceof HTMLInputElement) target.select()
-    return () => previous?.focus?.()
+    // Devolve o foco só depois que a tecla atual terminar: senão o Enter que confirmou
+    // "clica" o botão que recebe o foco (e reabriria o diálogo).
+    return () => {
+      requestAnimationFrame(() => {
+        const free = !document.activeElement || document.activeElement === document.body
+        if (free && previous?.isConnected) previous.focus()
+      })
+    }
   }, [req])
 
   const cancel = () => respond(req.kind === 'confirm' ? false : null)
@@ -62,7 +69,11 @@ function DialogView() {
             placeholder={req.placeholder}
             spellCheck={false}
             onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && respond(value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              respond(value)
+            }}
           />
         )}
         <div className="dialog-actions">
