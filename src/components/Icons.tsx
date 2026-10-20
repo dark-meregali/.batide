@@ -76,17 +76,6 @@ export const IconLogo = ({ size = 28 }: { size?: number }) => (
   </svg>
 )
 
-/** Cor do pontinho ao lado do nome do arquivo, por extensão. */
-export function fileColor(name: string) {
-  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase()
-  const map: Record<string, string> = {
-    ts: '#4f9dff', tsx: '#4f9dff', js: '#f2d36b', jsx: '#f2d36b', mjs: '#f2d36b', json: '#f2a971',
-    html: '#f28b6b', css: '#7cc4ff', scss: '#f28fad', md: '#9a9db0', sql: '#4fd1c5', pks: '#4fd1c5',
-    pkb: '#4fd1c5', pls: '#4fd1c5', plsql: '#4fd1c5', prc: '#4fd1c5', fnc: '#4fd1c5', trg: '#4fd1c5',
-    pck: '#4fd1c5', svg: '#f2a971', yml: '#a99bff', yaml: '#a99bff', py: '#7cc4ff',
-  }
-  return map[ext] ?? '#5f6373'
-}
 export const IconArrowDown = (p: P) => (
   <svg {...base(p)}><path d="M12 5v14M6 13l6 6 6-6" /></svg>
 )

@@ -13,6 +13,7 @@ export default function Editor() {
 
   useEffect(() => {
     const s = useSettings.getState()
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
     const editor = monaco.editor.create(host.current!, {
       model: null,
       theme: 'batide-dark',
@@ -23,9 +24,9 @@ export default function Editor() {
       tabSize: s.tabSize,
       wordWrap: s.wordWrap ? 'on' : 'off',
       minimap: { enabled: s.minimap },
-      smoothScrolling: true,
-      cursorBlinking: 'smooth',
-      cursorSmoothCaretAnimation: 'on',
+      smoothScrolling: !reduceMotion,
+      cursorBlinking: reduceMotion ? 'solid' : 'smooth',
+      cursorSmoothCaretAnimation: reduceMotion ? 'off' : 'on',
       renderLineHighlight: 'all',
       scrollBeyondLastLine: false,
       padding: { top: 12 },
@@ -40,6 +41,11 @@ export default function Editor() {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const path = shownPath.current
       if (path) saveFile(path, editor)
+    })
+    // Alt+W fecha a aba. Registrado no editor porque o Monaco usaria para "palavra inteira" da busca.
+    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyW, () => {
+      const path = useWorkspace.getState().active
+      if (path) useWorkspace.getState().closeTab(path)
     })
     // No Linux o padrão do Monaco é Ctrl+Shift+I; usamos o mesmo atalho em todo lugar.
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
@@ -76,7 +82,11 @@ export default function Editor() {
           activeLanguage: languageLabel(entry.model.getLanguageId()),
           cursor: { line: pos?.lineNumber ?? 1, col: pos?.column ?? 1 },
         })
-        editor.focus()
+        // Não rouba o foco de um campo em uso (ex.: o nome de um arquivo sendo criado na árvore).
+        const focused = document.activeElement
+        const typingElsewhere =
+          (focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement) && !host.current?.contains(focused)
+        if (!typingElsewhere) editor.focus()
       })
       .catch((e) => useWorkspace.getState().notify(String(e?.message ?? e)))
     return () => {

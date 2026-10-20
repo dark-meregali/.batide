@@ -1,4 +1,4 @@
-import { test, expect, typeInEditor, editorText, type FakeGithub } from './fixtures'
+import { test, expect, typeInEditor, editorText, appDialog, type FakeGithub } from './fixtures'
 import type { Page } from '@playwright/test'
 
 async function loginWithToken(page: Page) {
@@ -86,7 +86,6 @@ test('edita, vê o diff, faz commit e push', async ({ page, github }) => {
 
 test('descarta alterações de um arquivo', async ({ page, github }) => {
   seed(github)
-  page.on('dialog', (d) => d.accept())
   await page.goto('/')
   await cloneDemo(page)
   await page.locator('.tree-row', { hasText: 'README.md' }).click()
@@ -95,6 +94,7 @@ test('descarta alterações de um arquivo', async ({ page, github }) => {
   await page.keyboard.press('Control+Shift+G')
   await page.locator('.scm-row').hover()
   await page.getByTitle('Descartar alterações').click()
+  await appDialog(page).getByRole('button', { name: 'Descartar' }).click()
   await expect(page.locator('.scm-row')).toHaveCount(0)
   await expect.poll(() => editorText(page)).toBe('# Demo\n')
 })

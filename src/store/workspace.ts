@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { type FsEntry, type FsProvider, basename, dirname, joinPath } from '../fs/types'
 import { t } from '../i18n'
+import { dialogs } from '../ui/dialogs'
 
 export interface Tab {
   path: string
@@ -9,6 +10,9 @@ export interface Tab {
 
 export type SidebarView = 'explorer' | 'git' | 'settings'
 export type Dialog = 'clone' | 'branch' | null
+
+/** Linha de edição inline na árvore: criando um item numa pasta ou renomeando um item. */
+export type Editing = { mode: 'create'; dir: string; kind: 'file' | 'dir' } | { mode: 'rename'; path: string } | null
 
 /**
  * Ponte para o módulo do editor (carregado sob demanda), que é dono dos modelos do
@@ -19,6 +23,8 @@ export const editorBridge: {
   disposeModel?: (path: string) => void
   /** Recarrega do disco um arquivo aberto sem alterações (após pull, checkout…). */
   reloadFromDisk?: (path: string) => Promise<void>
+  /** Salva no disco o conteúdo atual do editor para esse arquivo. */
+  save?: (path: string) => Promise<void>
 } = {}
 
 /** Abas de diff usam o prefixo "diff:" antes do caminho do arquivo. */
@@ -38,9 +44,11 @@ interface WorkspaceState {
   sidebarView: SidebarView
   toast: string | null
   dialog: Dialog
+  editing: Editing
 
   openProject: (fs: FsProvider) => Promise<void>
-  closeProject: () => void
+  /** Fecha o projeto; com alterações não salvas pergunta antes. false = usuário cancelou. */
+  closeProject: () => Promise<boolean>
   loadDir: (path: string) => Promise<void>
   toggleDir: (path: string) => Promise<void>
   collapseAll: () => void
@@ -48,11 +56,15 @@ interface WorkspaceState {
   select: (path: string | null) => void
   openFile: (path: string) => void
   openDiff: (path: string) => void
-  closeTab: (path: string) => void
+  closeTab: (path: string) => Promise<void>
   setActive: (path: string) => void
   setDirty: (path: string, dirty: boolean) => void
-  createEntry: (dir: string, kind: 'file' | 'dir') => Promise<void>
-  renameEntry: (path: string) => Promise<void>
+  /** Pasta onde "novo arquivo" cria: a selecionada, a do arquivo selecionado ou a raiz. */
+  newEntryTarget: () => string
+  startCreate: (dir: string, kind: 'file' | 'dir') => Promise<void>
+  startRename: (path: string) => void
+  cancelEdit: () => void
+  commitEdit: (name: string) => Promise<void>
   deleteEntry: (path: string) => Promise<void>
   showSidebar: (view: SidebarView) => void
   toggleSidebar: () => void
@@ -79,16 +91,31 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     sidebarView: 'explorer',
     toast: null,
     dialog: null,
+    editing: null,
 
     async openProject(fs) {
-      get().closeProject()
+      if (!(await get().closeProject())) return
       set({ fs, expanded: { '/': true }, sidebarVisible: true, sidebarView: 'explorer' })
       await get().loadDir('/')
     },
 
-    closeProject() {
+    async closeProject() {
+      const unsaved = Object.keys(get().dirty).filter((p) => get().dirty[p])
+      if (unsaved.length) {
+        const choice = await dialogs.choose({
+          title: unsaved.length === 1 ? t('confirm.unsavedProjectOne') : t('confirm.unsavedProject', { n: unsaved.length }),
+          message: unsaved.map(basename).join(', '),
+          choices: [
+            { id: 'save', label: t('dialog.saveAll') },
+            { id: 'discard', label: t('dialog.discard'), danger: true },
+          ],
+        })
+        if (!choice) return false
+        if (choice === 'save') for (const path of unsaved) await editorBridge.save?.(path)
+      }
       for (const tab of get().tabs) editorBridge.disposeModel?.(tab.path)
-      set({ fs: null, tree: {}, expanded: {}, selected: null, tabs: [], active: null, dirty: {} })
+      set({ fs: null, tree: {}, expanded: {}, selected: null, tabs: [], active: null, dirty: {}, editing: null })
+      return true
     },
 
     async loadDir(path) {
@@ -140,9 +167,19 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       set({ active: id })
     },
 
-    closeTab(path) {
+    async closeTab(path) {
+      if (get().dirty[path]) {
+        const choice = await dialogs.choose({
+          title: t('confirm.unsaved', { name: basename(path) }),
+          choices: [
+            { id: 'save', label: t('dialog.save') },
+            { id: 'discard', label: t('dialog.discard'), danger: true },
+          ],
+        })
+        if (!choice) return
+        if (choice === 'save') await editorBridge.save?.(path)
+      }
       const { tabs, active, dirty } = get()
-      if (dirty[path] && !confirm(t('confirm.unsaved', { name: basename(path) }))) return
       const idx = tabs.findIndex((t) => t.path === path)
       const next = tabs.filter((t) => t.path !== path)
       const nextActive = active === path ? (next[idx] ?? next[idx - 1])?.path ?? null : active
@@ -160,43 +197,63 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       set((s) => ({ dirty: { ...s.dirty, [path]: dirty } }))
     },
 
-    async createEntry(dir, kind) {
-      const fs = get().fs
-      if (!fs) return
-      const name = prompt(t(kind === 'file' ? 'prompt.fileName' : 'prompt.folderName'))?.trim()
-      if (!name) return
-      const path = joinPath(dir, name)
-      try {
-        if (await fs.exists(path)) return get().notify(t('error.exists'))
-        // Permite "pasta/sub/arquivo.ts": cria as pastas intermediárias.
-        const parts = name.split('/').filter(Boolean)
-        let cur = dir
-        for (const part of parts.slice(0, kind === 'file' ? -1 : undefined)) {
-          cur = joinPath(cur, part)
-          if (!(await fs.exists(cur))) await fs.mkdir(cur)
-        }
-        if (kind === 'file') await fs.writeFile(path, '')
-        set((s) => ({ expanded: { ...s.expanded, [dir]: true } }))
-        await get().refresh()
-        if (kind === 'file') get().openFile(path)
-        else get().select(path)
-      } catch (e) {
-        fail(e)
-      }
+    newEntryTarget() {
+      const { selected, tree } = get()
+      if (!selected) return '/'
+      const isDir = Object.values(tree).some((list) => list.some((e) => e.path === selected && e.kind === 'dir'))
+      return isDir ? selected : dirname(selected)
     },
 
-    async renameEntry(path) {
+    async startCreate(dir, kind) {
+      set((s) => ({ editing: { mode: 'create', dir, kind }, expanded: { ...s.expanded, [dir]: true } }))
+      if (!get().tree[dir]) await get().loadDir(dir)
+    },
+
+    startRename(path) {
+      if (path !== '/') set({ editing: { mode: 'rename', path }, selected: path })
+    },
+
+    cancelEdit() {
+      set({ editing: null })
+    },
+
+    async commitEdit(raw) {
+      const editing = get().editing
       const fs = get().fs
-      if (!fs || path === '/') return
-      const name = prompt(t('prompt.newName'), basename(path))?.trim()
-      if (!name || name === basename(path)) return
-      const to = joinPath(dirname(path), name)
+      const name = raw.trim()
+      if (!editing || !fs) return
+      if (!name) return set({ editing: null })
       try {
+        if (editing.mode === 'create') {
+          const { dir, kind } = editing
+          const path = joinPath(dir, name)
+          if (await fs.exists(path)) return get().notify(t('error.exists'))
+          // Permite "pasta/sub/arquivo.ts": cria as pastas intermediárias.
+          const parts = name.split('/').filter(Boolean)
+          const parents = [dir] // pastas a abrir no explorador para revelar o item criado
+          let cur = dir
+          for (const part of parts.slice(0, kind === 'file' ? -1 : undefined)) {
+            cur = joinPath(cur, part)
+            if (!(await fs.exists(cur))) await fs.mkdir(cur)
+            if (cur !== path) parents.push(cur)
+          }
+          if (kind === 'file') await fs.writeFile(path, '')
+          set((s) => ({ editing: null, expanded: { ...s.expanded, ...Object.fromEntries(parents.map((p) => [p, true])) } }))
+          await get().refresh()
+          if (kind === 'file') get().openFile(path)
+          else get().select(path)
+          return
+        }
+
+        const { path } = editing
+        if (name === basename(path)) return set({ editing: null })
+        const to = joinPath(dirname(path), name)
         if (await fs.exists(to)) return get().notify(t('error.exists'))
         await fs.rename(path, to)
         const remap = (p: string) => (isUnder(p, path) ? to + p.slice(path.length) : p)
         for (const tab of get().tabs) if (isUnder(tab.path, path)) editorBridge.renameModel?.(tab.path, remap(tab.path))
         set((s) => ({
+          editing: null,
           tabs: s.tabs.map((tab) => ({ path: remap(tab.path), name: basename(remap(tab.path)) })),
           active: s.active && remap(s.active),
           selected: to,
@@ -205,6 +262,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
         }))
         await get().refresh()
       } catch (e) {
+        set({ editing: null })
         fail(e)
       }
     },
@@ -212,13 +270,19 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     async deleteEntry(path) {
       const fs = get().fs
       if (!fs || path === '/') return
-      if (!confirm(t('confirm.delete', { name: basename(path) }))) return
+      const ok = await dialogs.confirm({
+        title: t('confirm.delete', { name: basename(path) }),
+        message: t('confirm.cannotUndo'),
+        confirmLabel: t('explorer.delete'),
+        danger: true,
+      })
+      if (!ok) return
       try {
         await fs.remove(path)
         const doomed = get().tabs.filter((tab) => isUnder(tab.path, path))
         for (const tab of doomed) {
           set((s) => ({ dirty: { ...s.dirty, [tab.path]: false } }))
-          get().closeTab(tab.path)
+          await get().closeTab(tab.path)
         }
         await get().refresh()
       } catch (e) {

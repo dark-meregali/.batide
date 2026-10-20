@@ -4,16 +4,20 @@ import { BrowserFs, createBrowserProject, lfs } from '../../fs/browserFs'
 import { DIFF_PREFIX, editorBridge, useWorkspace } from '../workspace'
 import { useGit } from '../git'
 import { useAuth } from '../../github/auth'
+import { useDialogs } from '../../ui/dialogs'
+import { answerDialogs } from '../../test/dialogs'
 
 let fs: BrowserFs
 let n = 0
 const g = () => useGit.getState()
 const ws = () => useWorkspace.getState()
 const author = { name: 'T', email: 't@e.com' }
+let answered: ReturnType<typeof answerDialogs> | undefined
+const answer = (...a: unknown[]) => (answered = answerDialogs(...a))
 
 beforeEach(async () => {
-  vi.unstubAllGlobals()
-  vi.stubGlobal('confirm', vi.fn(() => true))
+  answered?.unsubscribe()
+  useDialogs.setState({ queue: [] })
   editorBridge.disposeModel = vi.fn()
   editorBridge.reloadFromDisk = vi.fn(async () => {})
   useAuth.setState({ token: null, user: null })
@@ -77,7 +81,9 @@ describe('discard', () => {
     await fs.writeFile('/a.txt', 'mudou')
     await g().refresh()
     ws().openFile('/a.txt')
+    const a = answer(true)
     await g().discard(g().changes[0])
+    expect(a.asked[0]).toMatchObject({ kind: 'confirm', danger: true })
     expect(await fs.readFile('/a.txt')).toBe('A')
     expect(editorBridge.reloadFromDisk).toHaveBeenCalledWith('/a.txt')
     expect(g().changes).toEqual([])
@@ -86,7 +92,7 @@ describe('discard', () => {
   it('não descarta se o usuário cancelar', async () => {
     await fs.writeFile('/a.txt', 'mudou')
     await g().refresh()
-    vi.stubGlobal('confirm', vi.fn(() => false))
+    answer(false)
     await g().discard(g().changes[0])
     expect(await fs.readFile('/a.txt')).toBe('mudou')
   })
@@ -105,7 +111,7 @@ describe('branches', () => {
     await g().createBranch('feature')
     await fs.writeFile('/a.txt', 'mudou')
     await g().refresh()
-    vi.stubGlobal('confirm', vi.fn(() => false))
+    answer(false)
     await g().checkout('main')
     expect(g().branch).toBe('feature')
   })

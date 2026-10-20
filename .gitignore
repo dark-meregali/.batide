@@ -6,3 +6,11 @@ dev-dist
 *.tsbuildinfo
 test-results
 playwright-report
+
+# impeccable: binários da engine (o launcher baixa sob demanda), hooks locais e cópias de outros agentes
+**/skills/impeccable/scripts/bin/
+.claude/settings.local.json
+.codex/
+.github/skills/
+.github/agents/
+.github/hooks/

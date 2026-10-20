@@ -30,9 +30,31 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ttf,woff2}'],
         // O Monaco tem arquivos grandes; precisam caber no cache para funcionar offline.
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        // São ~1250 ícones de arquivo: entram no cache conforme aparecem, não todos na instalação.
+        globIgnores: ['file-icons/**'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/file-icons/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'file-icons', expiration: { maxEntries: 2000 } },
+          },
+        ],
       },
     }),
   ],
   worker: { format: 'es' },
-  build: { target: 'es2022', chunkSizeWarningLimit: 8000 },
+  build: {
+    target: 'es2022',
+    chunkSizeWarningLimit: 8000,
+    // Ícones sempre como arquivos (cacheados sob demanda), nunca embutidos no JS.
+    assetsInlineLimit: (file) => (file.includes('material-icon-theme') ? false : undefined),
+    rollupOptions: {
+      output: {
+        assetFileNames: (asset) =>
+          asset.originalFileNames?.some((f) => f.includes('material-icon-theme/icons/'))
+            ? 'file-icons/[name]-[hash][extname]'
+            : 'assets/[name]-[hash][extname]',
+      },
+    },
+  },
 })

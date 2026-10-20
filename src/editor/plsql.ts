@@ -62,6 +62,11 @@ const language: Monaco.languages.IMonarchLanguage = {
       [/%\s*(type|rowtype|found|notfound|isopen|rowcount|bulk_rowcount)\b/i, 'keyword'],
       [/\d+(\.\d+)?([eE][+-]?\d+)?[fFdD]?/, 'number'],
       [/^\s*\/\s*$/, 'delimiter.slash'],
+      // Identificador seguido de "(": chamada ou declaração de função.
+      [
+        /[a-zA-Z_][\w$#]*(?=\s*\()/,
+        { cases: { '@keywords': 'keyword', '@types': 'type', '@builtins': 'predefined', '@default': 'function' } },
+      ],
       [
         /[a-zA-Z_][\w$#]*/,
         { cases: { '@keywords': 'keyword', '@types': 'type', '@builtins': 'predefined', '@default': 'identifier' } },

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { BrowserFs } from '../fs/browserFs'
 import { DIFF_PREFIX, editorBridge, useWorkspace } from './workspace'
 import { t } from '../i18n'
+import { dialogs } from '../ui/dialogs'
 import type { Change } from '../git/git'
 
 // O isomorphic-git (~300 kB) só é baixado quando um projeto do navegador é aberto.
@@ -141,7 +142,7 @@ export const useGit = create<GitState>()((set, get) => {
       run('checkout', async () => {
         const { dir, changes } = get()
         if (!dir) return
-        if (changes.length && !confirm(t('git.checkoutDirty'))) return
+        if (changes.length && !(await dialogs.confirm({ title: t('git.checkoutDirtyTitle'), message: t('git.checkoutDirty'), confirmLabel: t('git.checkoutAnyway') }))) return
         await (await loadGit()).checkout(dir, ref)
         await afterWorkdirChange()
       }),
@@ -158,7 +159,13 @@ export const useGit = create<GitState>()((set, get) => {
       run('discard', async () => {
         const { dir } = get()
         if (!dir) return
-        if (!confirm(t('git.discardConfirm', { name: change.file }))) return
+        const ok = await dialogs.confirm({
+          title: t('git.discardConfirm', { name: change.file }),
+          message: t('confirm.cannotUndo'),
+          confirmLabel: t('dialog.discard'),
+          danger: true,
+        })
+        if (!ok) return
         await (await loadGit()).discard(dir, change)
         await afterWorkdirChange()
       }),

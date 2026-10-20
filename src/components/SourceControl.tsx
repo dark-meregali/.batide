@@ -3,7 +3,8 @@ import { useWorkspace } from '../store/workspace'
 import { useAuth } from '../github/auth'
 import { useT } from '../i18n'
 import type { Change } from '../git/git'
-import { IconArrowDown, IconArrowUp, IconBranch, IconRefresh, IconUndo, fileColor } from './Icons'
+import { IconArrowDown, IconArrowUp, IconBranch, IconRefresh, IconUndo } from './Icons'
+import { FileIcon } from './FileIcon'
 
 export const STATUS_COLORS: Record<Change['status'], string> = {
   M: '#e5c890',
@@ -80,7 +81,7 @@ export function SourceControl({ onPickBranch }: { onPickBranch: () => void }) {
             const dir = c.file.slice(0, c.file.lastIndexOf('/'))
             return (
               <div key={c.file} className="scm-row" onClick={() => ws.openDiff('/' + c.file)} title={c.file}>
-                <span className="file-dot" style={{ background: fileColor(name) }} />
+                <FileIcon name={name} kind="file" />
                 <span className={'scm-name' + (c.status === 'D' ? ' deleted' : '')}>{name}</span>
                 <span className="scm-dir">{dir}</span>
                 <button

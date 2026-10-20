@@ -6,6 +6,8 @@ import { useT } from './i18n'
 import { Explorer } from './components/Explorer'
 import { SettingsView } from './components/SettingsView'
 import { Welcome } from './components/Welcome'
+import { FileIcon } from './components/FileIcon'
+import { DialogHost } from './components/DialogHost'
 import { SourceControl } from './components/SourceControl'
 import { BranchPicker, CloneDialog } from './components/GitDialogs'
 import { useGit } from './store/git'
@@ -13,7 +15,7 @@ import { completeLoginFromUrl, useAuth } from './github/auth'
 import { DIFF_PREFIX } from './store/workspace'
 import { t as tr } from './i18n'
 import {
-  IconBranch, IconCheck, IconClose, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings, fileColor,
+  IconBranch, IconCheck, IconClose, IconFilePlus, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings,
 } from './components/Icons'
 
 const Editor = lazy(() => import('./components/Editor'))
@@ -108,6 +110,7 @@ export default function App() {
       {toast && <div className="toast">{toast}</div>}
       {dialog === 'clone' && <CloneDialog onClose={() => useWorkspace.getState().setDialog(null)} />}
       {dialog === 'branch' && <BranchPicker onClose={() => useWorkspace.getState().setDialog(null)} />}
+      <DialogHost />
     </div>
   )
 }
@@ -123,15 +126,15 @@ function ActivityBar() {
   return (
     <nav className="activity-bar">
       <div className="activity-logo"><IconLogo size={22} /></div>
-      <button className={'activity-btn' + on('explorer')} title={t('explorer.title')} disabled={!fs} onClick={() => ws.showSidebar('explorer')}>
+      <button className={'activity-btn' + on('explorer')} title={t('explorer.title')} aria-label={t('explorer.title')} aria-pressed={!!on('explorer')} disabled={!fs} onClick={() => ws.showSidebar('explorer')}>
         <IconFiles size={20} />
       </button>
-      <button className={'activity-btn' + on('git')} title={t('git.title') + ' (Ctrl+Shift+G)'} disabled={!fs} onClick={() => ws.showSidebar('git')}>
+      <button className={'activity-btn' + on('git')} title={t('git.title') + ' (Ctrl+Shift+G)'} aria-label={t('git.title')} aria-pressed={!!on('git')} disabled={!fs} onClick={() => ws.showSidebar('git')}>
         <IconGit size={20} />
         {changes > 0 && <span className="activity-badge">{changes > 99 ? '99+' : changes}</span>}
       </button>
       <div className="spacer" />
-      <button className={'activity-btn' + on('settings')} title={t('settings.title')} onClick={() => ws.showSidebar('settings')}>
+      <button className={'activity-btn' + on('settings')} title={t('settings.title')} aria-label={t('settings.title')} aria-pressed={!!on('settings')} onClick={() => ws.showSidebar('settings')}>
         <IconSettings size={20} />
       </button>
     </nav>
@@ -179,21 +182,41 @@ function TabBar() {
   const active = useWorkspace((s) => s.active)
   const dirty = useWorkspace((s) => s.dirty)
   const ws = useWorkspace.getState()
+  const bar = useRef<HTMLDivElement>(null)
+
+  // Setas movem o foco entre abas; Enter/Espaço ativa (padrão ARIA de tabs).
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const els = [...bar.current!.querySelectorAll<HTMLElement>('[role="tab"]')]
+    const i = els.indexOf(document.activeElement as HTMLElement)
+    if (i < 0) return
+    if (e.key === 'ArrowRight') els[(i + 1) % els.length].focus()
+    else if (e.key === 'ArrowLeft') els[(i - 1 + els.length) % els.length].focus()
+    else if (e.key === 'Enter' || e.key === ' ') ws.setActive(tabs[i].path)
+    else return
+    e.preventDefault()
+  }
+
   return (
-    <div className="tab-bar">
+    <div className="tab-bar" role="tablist" ref={bar} onKeyDown={onKeyDown}>
       {tabs.map((tab) => (
         <div
           key={tab.path}
           className={'tab' + (tab.path === active ? ' active' : '')}
+          role="tab"
+          aria-label={tab.path.startsWith(DIFF_PREFIX) ? `${tab.name} (diff)` : tab.name}
+          aria-selected={tab.path === active}
+          tabIndex={tab.path === active ? 0 : -1}
           onClick={() => ws.setActive(tab.path)}
           onAuxClick={(e) => e.button === 1 && ws.closeTab(tab.path)}
           title={tab.path}
         >
-          <span className="file-dot" style={{ background: fileColor(tab.name) }} />
+          <FileIcon name={tab.name} kind="file" />
           <span className="tab-name">{tab.name}</span>
           <button
             className={'tab-close' + (dirty[tab.path] ? ' dirty' : '')}
             title={t('tab.close')}
+            aria-label={`${t('tab.close')} ${tab.name}`}
+            tabIndex={-1}
             onClick={(e) => {
               e.stopPropagation()
               ws.closeTab(tab.path)
@@ -207,10 +230,28 @@ function TabBar() {
   )
 }
 
+const MOD = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl'
+
+/** Sem arquivo aberto: o que dá para fazer agora, em vez de uma tela vazia. */
 function EmptyEditor() {
+  const t = useT()
+  const ws = useWorkspace.getState()
   return (
     <div className="empty-editor">
-      <IconLogo size={72} />
+      <IconLogo size={56} />
+      <div className="empty-actions">
+        <button className="welcome-action" onClick={() => ws.startCreate(ws.newEntryTarget(), 'file')}>
+          <IconFilePlus /> {t('explorer.newFile')}
+        </button>
+        <button className="welcome-action" onClick={() => ws.showSidebar('git')}>
+          <IconGit /> {t('git.title')}
+        </button>
+      </div>
+      <dl className="shortcuts">
+        <dt>{t('shortcut.save')}</dt><dd><kbd>{MOD}</kbd><kbd>S</kbd></dd>
+        <dt>{t('shortcut.toggleSidebar')}</dt><dd><kbd>{MOD}</kbd><kbd>B</kbd></dd>
+        <dt>{t('git.title')}</dt><dd><kbd>{MOD}</kbd><kbd>Shift</kbd><kbd>G</kbd></dd>
+      </dl>
     </div>
   )
 }
@@ -247,7 +288,7 @@ function StatusBar() {
       <div className="spacer" />
       {offlineReady && (
         <span className="status-item muted" title={t('status.offlineReady')}>
-          <IconCheck size={13} /> offline
+          <IconCheck size={13} /> {t('status.offlineReadyShort')}
         </span>
       )}
       {active && (

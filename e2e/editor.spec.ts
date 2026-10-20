@@ -1,11 +1,9 @@
-import { test, expect, answerDialogs, typeInEditor, editorText } from './fixtures'
+import { test, expect, typeInEditor, editorText, newProject, createFiles } from './fixtures'
 
 test('cria projeto no navegador, edita PL/SQL, formata e salva', async ({ page }) => {
-  answerDialogs(page, 'meu-projeto', 'pkg_vendas.pkb')
   await page.goto('/')
-  await page.getByText('Novo projeto no navegador').click()
-  await page.getByTitle('Novo arquivo').click()
-  await expect(page.locator('.tab.active')).toHaveText(/pkg_vendas\.pkb/)
+  await newProject(page, 'meu-projeto')
+  await createFiles(page, 'pkg_vendas.pkb')
 
   await typeInEditor(page, 'begin\nnull;\nend;')
   await expect(page.locator('.tab-close.dirty')).toHaveCount(1)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { useWorkspace } from '../store/workspace'
+import { dialogs } from '../ui/dialogs'
 import { BrowserFs, createBrowserProject, deleteBrowserProject, listBrowserProjects } from '../fs/browserFs'
 import { localFsSupported, pickLocalFolder } from '../fs/localFs'
 import { IconGit, IconGlobe, IconLaptop, IconLogo, IconPlus, IconTrash } from './Icons'
@@ -29,7 +30,7 @@ export function Welcome() {
   }
 
   const newProject = async () => {
-    const name = prompt(t('prompt.projectName'))?.trim().replace(/[\\/]/g, '-')
+    const name = (await dialogs.prompt({ title: t('welcome.newBrowser'), placeholder: t('prompt.projectName'), confirmLabel: t('dialog.create') }))?.replace(/[\\/]/g, '-')
     if (!name) return
     if (projects.includes(name)) return ws.notify(t('error.exists'))
     await createBrowserProject(name)
@@ -37,7 +38,13 @@ export function Welcome() {
   }
 
   const removeProject = async (name: string) => {
-    if (!confirm(t('confirm.deleteProject', { name }))) return
+    const ok = await dialogs.confirm({
+      title: t('confirm.deleteProject', { name }),
+      message: t('confirm.cannotUndo'),
+      confirmLabel: t('explorer.delete'),
+      danger: true,
+    })
+    if (!ok) return
     await deleteBrowserProject(name)
     reload()
   }
