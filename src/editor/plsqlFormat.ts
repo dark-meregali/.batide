@@ -6,7 +6,8 @@
  * o alinhamento do autor.
  */
 
-type Frame = 'decl' | 'block' | 'exc' | 'if' | 'loop' | 'case' | 'when'
+// 'casex': case dentro de uma expressão (x := case …, select case …), não é bloco de comandos.
+type Frame = 'decl' | 'block' | 'exc' | 'if' | 'loop' | 'case' | 'casex' | 'when'
 
 interface Tok {
   kind: 'word' | 'other'
@@ -19,7 +20,17 @@ export interface FormatOptions {
   keywords: Set<string>
   /** Padrão da equipe: minúsculas. */
   keywordCase?: 'lower' | 'upper'
+  /**
+   * Padrão da equipe: "--" depois de cada abertura de bloco, antes de cada fechamento e entre
+   * um bloco e o comando vizinho. Comandos simples seguidos ficam agrupados como estão.
+   */
+  separators?: boolean
 }
+
+/** O que veio na última linha de código, para decidir onde vai o separador "--". */
+type Prev = 'none' | 'comment' | 'opener' | 'exception' | 'blockEnd' | 'stmt'
+
+const BLOCK_START = new Set(['IF', 'FOR', 'WHILE', 'LOOP', 'BEGIN', 'CASE', 'DECLARE', 'PROCEDURE', 'FUNCTION', 'CREATE'])
 
 // Palavras que iniciam a declaração de uma unidade cujo IS/AS abre uma seção de declarações.
 const UNIT_WORDS = new Set(['PROCEDURE', 'FUNCTION', 'PACKAGE', 'BODY'])
@@ -36,6 +47,7 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
   // Indentação original e nova da primeira linha do comando atual.
   let anchorOrig = 0
   let anchorNew = 0
+  let prev: Prev = 'none'
 
   const top = () => stack[stack.length - 1]
 
@@ -56,6 +68,7 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
     if (line === '/') {
       stack.length = 0
       stmt = []
+      prev = 'none'
       out.push('/')
       continue
     }
@@ -68,7 +81,8 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
     // ---- indentação desta linha ----
     let level = stack.length
     let continuation = false
-    if (first === 'END') level -= top() === 'when' ? 2 : 1
+    if (top() === 'casex') continuation = true // dentro de "x := case …": linhas do mesmo comando
+    else if (first === 'END') level -= top() === 'when' ? 2 : 1
     else if (first === 'BEGIN' && top() === 'decl') level -= 1
     else if ((first === 'ELSE' || first === 'ELSIF') && (top() === 'if' || top() === 'when')) level -= 1
     else if (first === 'EXCEPTION' && top() === 'block') level -= 1
@@ -76,6 +90,7 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
     else continuation = stmt.length > 0
     level = Math.max(0, level)
     const origIndent = raw.length - raw.trimStart().length
+    const prevAnchor = anchorNew
     let indent: string
     if (continuation) {
       // Mantém a distância até a primeira linha do comando; sem recuo próprio, um nível a mais.
@@ -90,9 +105,21 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
       anchorNew = indent.length
     }
 
+    // ---- separador "--" antes desta linha (padrão da equipe) ----
+    const isComment = line.startsWith('--') || line.startsWith('/*')
+    if (opts.separators && !continuation && !isComment && prev !== 'none' && prev !== 'comment') {
+      // Fechamento (end, elsif, else, exception, begin das declarações) ou when: recua um nível.
+      const closer = level < stack.length || first === 'WHEN'
+      if (closer) {
+        if (prev === 'stmt' || prev === 'blockEnd') out.push(' '.repeat(prevAnchor) + '--')
+      } else if (prev === 'opener' || prev === 'blockEnd' || (prev === 'stmt' && BLOCK_START.has(first))) {
+        out.push(indent + '--')
+      }
+    }
+
     // ---- atualiza a pilha de blocos, token a token ----
     const depthBefore = stack.length
-    let prev = ''
+    let prevWord = ''
     for (let i = 0; i < toks.length; i++) {
       const tok = toks[i]
       if (tok.kind !== 'word') {
@@ -113,13 +140,13 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
           else stack.push('block')
           break
         case 'LOOP':
-          if (prev !== 'END') stack.push('loop')
+          if (prevWord !== 'END') stack.push('loop')
           break
         case 'IF':
-          if (prev !== 'END') stack.push('if')
+          if (prevWord !== 'END') stack.push('if')
           break
         case 'CASE':
-          if (prev !== 'END') stack.push('case')
+          if (prevWord !== 'END') stack.push(stmt.length > 0 ? 'casex' : 'case')
           break
         case 'EXCEPTION':
           if (i === 0 && top() === 'block') stack[stack.length - 1] = 'exc'
@@ -139,15 +166,28 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
           stack.pop()
           break
       }
-      // "cursor c is" continua no select da linha de baixo.
+      // "cursor c is" continua no select da linha de baixo; "x := case" continua o comando.
       const cursorIs = (w === 'IS' || w === 'AS') && stmt.includes('CURSOR')
-      stmt = STMT_RESET.has(w) && !cursorIs ? [] : [...stmt, w]
-      prev = w
+      const inExpr = stack.includes('casex')
+      stmt = STMT_RESET.has(w) && !cursorIs && !inExpr ? [] : [...stmt, w]
+      prevWord = w
     }
     // Linha que abriu um bloco (ex.: "CASE r.id") não deixa as seguintes como continuação.
     if (stack.length > depthBefore) stmt = []
     inComment = res.inComment
     inString = res.inString
+
+    // ---- o que esta linha deixa para a próxima ----
+    if (isComment) prev = 'comment'
+    else {
+      const code = toks.filter((t) => !t.text.startsWith('--') && !t.text.startsWith('/*')).map((t) => t.text).join('').trim()
+      const lastWord = [...toks].reverse().find((t) => t.kind === 'word')?.text.toUpperCase() ?? ''
+      if (stack.includes('casex')) prev = 'stmt'
+      else if (/^end\b/i.test(code) || /\bend(\s+[\w$#]+)?\s*;$/i.test(code)) prev = 'blockEnd'
+      else if (first === 'EXCEPTION' && lastWord === 'EXCEPTION') prev = 'exception'
+      else if (stack.length > depthBefore || lastWord === 'THEN' || lastWord === 'ELSE' || first === 'BEGIN') prev = 'opener'
+      else prev = 'stmt'
+    }
 
     const text = toks
       .map((t) => {
@@ -159,8 +199,34 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
     out.push(indent + text)
   }
 
+  alignParams(out)
   // No máximo uma linha em branco seguida.
   return out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/\s*$/, '\n')
+}
+
+const PARAM_HEADER = /^(\s*(?:create\s+(?:or\s+replace\s+)?)?(?:procedure|function|cursor)\s+[\w$#."]+\s*\()\s*(.*)$/i
+const PARAM = /^([\w$#"]+)\s*(.*)$/
+
+/**
+ * Lista de parâmetros com a vírgula na frente (padrão da equipe): vírgula embaixo do "(" e
+ * modo/tipo de todos os parâmetros na mesma coluna, inclusive o da primeira linha.
+ */
+function alignParams(out: string[]) {
+  for (let i = 0; i < out.length; i++) {
+    const head = PARAM_HEADER.exec(out[i])
+    if (!head || !out[i + 1]?.trimStart().startsWith(',')) continue
+    const params = [head[2]]
+    let j = i + 1
+    while (j < out.length && out[j].trimStart().startsWith(',')) params.push(out[j++].trimStart().slice(1).trimStart())
+    const parsed = params.map((p) => PARAM.exec(p))
+    if (parsed.some((m) => !m)) continue
+    const width = Math.max(...parsed.map((m) => m![1].length))
+    const cell = (m: RegExpExecArray) => (m[2] ? m[1].padEnd(width) + ' ' + m[2] : m[1])
+    const col = head[1].length - 1 // coluna do "("
+    out[i] = head[1] + cell(parsed[0]!)
+    for (let k = 1; k < parsed.length; k++) out[i + k] = ' '.repeat(col) + ',' + cell(parsed[k]!)
+    i = j - 1
+  }
 }
 
 /** IS/AS é a última palavra de código da linha (ex.: "PROCEDURE p IS"), e não "x AS alias". */

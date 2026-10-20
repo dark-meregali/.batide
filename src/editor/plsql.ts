@@ -195,7 +195,7 @@ export function registerPlsql(monaco: typeof Monaco, keywordCase: () => KeywordC
   monaco.languages.registerDocumentFormattingEditProvider('plsql', {
     provideDocumentFormattingEdits(model, options) {
       const indent = options.insertSpaces ? ' '.repeat(options.tabSize) : '\t'
-      const text = formatPlsql(model.getValue(), { indent, keywords: keywordSet, keywordCase: keywordCase() })
+      const text = formatPlsql(model.getValue(), { indent, keywords: keywordSet, keywordCase: keywordCase(), separators: true })
       return [{ range: model.getFullModelRange(), text }]
     },
   })
