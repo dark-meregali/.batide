@@ -69,6 +69,7 @@ test.describe('app desktop (Tauri)', () => {
 
   test('controle de versão em pasta do computador aponta para o terminal', async ({ page }) => {
     await page.getByText('Abrir pasta do computador').click()
+    await expect(page.locator('.sidebar-title')).toHaveText('meu-projeto') // o atalho só vale com projeto aberto
     await page.keyboard.press('Control+Shift+G')
     await page.getByRole('button', { name: 'Abrir terminal' }).click()
     await expect(page.locator('.terminal-panel')).toBeVisible()
