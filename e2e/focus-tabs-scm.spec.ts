@@ -49,7 +49,7 @@ test.describe('foco pelo teclado', () => {
     await page.goto('/')
     await newProject(page, 'aviso')
     await createFiles(page, 'a.ts')
-    await page.locator('.tree').click({ position: { x: 3, y: 3 } })
+    await page.locator('.file-tree').click({ position: { x: 3, y: 3 } })
     await page.locator('.sidebar-header').getByRole('button', { name: 'Novo arquivo' }).click()
     await page.locator('.tree-edit input').fill('a.ts')
     await page.keyboard.press('Enter')

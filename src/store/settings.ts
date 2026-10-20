@@ -9,6 +9,8 @@ export interface Settings {
   wordWrap: boolean
   minimap: boolean
   formatOnSave: boolean
+  /** Caixa das palavras-chave PL/SQL nas sugestões, snippets e formatador. */
+  plsqlKeywordCase: 'lower' | 'upper'
   autoSave: boolean
   sidebarWidth: number
   /** URL do Cloudflare Worker (login OAuth + proxy do git). */
@@ -29,6 +31,7 @@ export const useSettings = create<Settings>()(
       wordWrap: false,
       minimap: false,
       formatOnSave: false,
+      plsqlKeywordCase: 'lower',
       autoSave: false,
       sidebarWidth: 260,
       proxyUrl: '',

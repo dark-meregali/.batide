@@ -1,4 +1,4 @@
-import { test, expect, newProject, createFiles, typeInEditor, typeLines, editorText } from './fixtures'
+import { test, expect, newProject, createFiles, typeInEditor, typeLines, typeAndEnter, editorText } from './fixtures'
 
 test.describe('padrão PL/SQL da equipe', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,14 +8,10 @@ test.describe('padrão PL/SQL da equipe', () => {
   })
 
   test('Enter abre bloco com "--", fecha com end if e separa comandos', async ({ page }) => {
-    await typeInEditor(page, 'begin')
-    await page.keyboard.press('Escape') // fecha sugestões, se houver
-    await page.keyboard.press('Enter')
-    await page.keyboard.type('if (p_id is null) then')
-    await page.keyboard.press('Escape')
-    await page.keyboard.press('Enter')
-    await page.keyboard.type("raise_application_error(-20001, 'Id não informado.');")
-    await page.keyboard.press('Enter')
+    await typeInEditor(page, '')
+    await typeAndEnter(page, 'begin')
+    await typeAndEnter(page, 'if (p_id is null) then')
+    await typeAndEnter(page, "raise_application_error(-20001, 'Id não informado.');")
     await page.keyboard.type('p_status := 1;')
     await expect
       .poll(() => editorText(page))
@@ -37,11 +33,7 @@ test.describe('padrão PL/SQL da equipe', () => {
   })
 
   test('fluxo completo: declarações, begin, if e exception no padrão da equipe', async ({ page }) => {
-    const enter = async (t: string) => {
-      await page.keyboard.type(t)
-      await page.keyboard.press('Escape')
-      await page.keyboard.press('Enter')
-    }
+    const enter = (t: string) => typeAndEnter(page, t)
     await typeInEditor(page, '')
     await enter('procedure prc_teste(p_id in number) is')
     await enter('v_total number;')
@@ -70,11 +62,7 @@ test.describe('padrão PL/SQL da equipe', () => {
   })
 
   test('exception volta para a coluna do begin e when others then abre o bloco', async ({ page }) => {
-    const enter = async (t: string) => {
-      await page.keyboard.type(t)
-      await page.keyboard.press('Escape')
-      await page.keyboard.press('Enter')
-    }
+    const enter = (t: string) => typeAndEnter(page, t)
     await typeInEditor(page, '')
     await enter('begin')
     await enter('p_status := 1;')
@@ -105,5 +93,46 @@ test.describe('padrão PL/SQL da equipe', () => {
     const suggest = page.locator('.suggest-widget .monaco-list-row').first()
     await expect(suggest).toContainText('select')
     await expect(suggest).not.toContainText('SELECT')
+  })
+})
+
+test.describe('caixa das palavras-chave PL/SQL (configurável)', () => {
+  test('lista de sugestões mostra a linha inteira (não fica cortada)', async ({ page }) => {
+    await page.goto('/')
+    await newProject(page, 'oracle')
+    await createFiles(page, 'a.sql')
+    await typeInEditor(page, 'proce')
+    const row = page.locator('.suggest-widget .monaco-list-row').first()
+    await expect(row).toBeVisible()
+    const list = await page.locator('.suggest-widget .monaco-list').boundingBox()
+    const rowBox = await row.boundingBox()
+    expect(list!.height).toBeGreaterThanOrEqual(rowBox!.height)
+  })
+
+  test('com "Maiúsculas" nas configurações, sugestões, snippets e formatador usam MAIÚSCULAS', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Configurações' }).click()
+    await page.getByLabel('Palavras-chave PL/SQL').selectOption('upper')
+    await page.getByRole('button', { name: 'Configurações' }).click()
+    await newProject(page, 'oracle')
+    await createFiles(page, 'a.sql')
+
+    await typeInEditor(page, 'selec')
+    const suggest = page.locator('.suggest-widget .monaco-list-row').first()
+    await expect(suggest).toContainText('SELECT')
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+
+    await page.keyboard.type('if')
+    await expect(page.locator('.suggest-widget .monaco-list-row.focused')).toContainText('if')
+    await page.keyboard.press('Tab')
+    await expect.poll(() => editorText(page)).toBe('IF (condicao) THEN\n  --\n  \n  --\nEND IF;')
+
+    await page.keyboard.press('Control+A')
+    await page.keyboard.press('Delete')
+    await typeLines(page, 'begin\nnull;\nend;')
+    await page.keyboard.press('Shift+Alt+F')
+    await expect.poll(() => editorText(page)).toMatch(/^BEGIN\n\s+NULL;\nEND;/)
   })
 })

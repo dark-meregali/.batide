@@ -141,7 +141,7 @@ export function Explorer() {
       </div>
       <div
         ref={treeRef}
-        className="tree"
+        className="file-tree"
         role="tree"
         aria-label={fs.name}
         onKeyDown={onTreeKeyDown}

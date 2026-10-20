@@ -44,6 +44,13 @@ export function SettingsView() {
         {toggle('wordWrap', t('settings.wordWrap'))}
         {toggle('minimap', t('settings.minimap'))}
         {toggle('formatOnSave', t('settings.formatOnSave'))}
+        <label className="setting-row">
+          <span>{t('settings.plsqlCase')}</span>
+          <select value={s.plsqlKeywordCase} onChange={(e) => s.set({ plsqlKeywordCase: e.target.value as 'lower' | 'upper' })}>
+            <option value="lower">{t('settings.plsqlCase.lower')}</option>
+            <option value="upper">{t('settings.plsqlCase.upper')}</option>
+          </select>
+        </label>
         {toggle('autoSave', t('settings.autoSave'))}
 
         <div className="settings-section">{t('github.title')}</div>
