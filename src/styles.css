@@ -1,23 +1,24 @@
 :root {
-  --bg: #0e0f13;
-  --bg-elev: #121318;
-  --bg-panel: #15161c;
-  --bg-hover: #1c1d25;
-  --bg-active: #24253a;
-  --border: #1f2028;
-  --border-strong: #2a2c37;
-  --text: #d6d7dd;
-  --text-dim: #a2a5b4;
-  --text-faint: #80849a;
-  --accent: #8b7cff;
-  /* Fundo de botão com texto branco: o violeta da marca escurecido até 5:1. */
-  --accent-strong: #6a58e6;
-  --accent-2: #4fd1c5;
-  --danger: #f2788d;
-  --git-modified: #e5c890;
-  --git-added: #a6d189;
-  --git-untracked: #8fd3a8;
-  --git-deleted: #f2788d;
+  /* Quase preto, com cinzas levemente quentes; destaque carmesim e âmbar. */
+  --bg: #050506;
+  --bg-elev: #0a0a0c;
+  --bg-panel: #0f0f12;
+  --bg-hover: #16161a;
+  --bg-active: #2a1418;
+  --border: #18181c;
+  --border-strong: #26252a;
+  --text: #ece6e6;
+  --text-dim: #aca5a7;
+  --text-faint: #918a8c;
+  --accent: #e5484d;
+  /* Fundo de botão com texto branco: o carmesim escurecido até 5:1. */
+  --accent-strong: #cc3339;
+  --accent-2: #f2994a;
+  --danger: #ff6b6b;
+  --git-modified: #e6c587;
+  --git-added: #8fd3a8;
+  --git-untracked: #7fc8a0;
+  --git-deleted: #ff6b6b;
   --radius: 8px;
   --font-ui: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', Consolas, monospace;
