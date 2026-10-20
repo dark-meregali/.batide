@@ -13,13 +13,15 @@ import { BranchPicker, CloneDialog } from './components/GitDialogs'
 import { useGit } from './store/git'
 import { completeLoginFromUrl, useAuth } from './github/auth'
 import { DIFF_PREFIX, editorBridge } from './store/workspace'
+import { isTauri } from './platform'
 import { t as tr } from './i18n'
 import {
-  IconBranch, IconCheck, IconClose, IconFilePlus, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings,
+  IconBranch, IconCheck, IconClose, IconFilePlus, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings, IconTerminal,
 } from './components/Icons'
 
 const Editor = lazy(() => import('./components/Editor'))
 const DiffView = lazy(() => import('./components/DiffView'))
+const TerminalPanel = lazy(() => import('./components/TerminalPanel'))
 
 export default function App() {
   const fs = useWorkspace((s) => s.fs)
@@ -28,6 +30,13 @@ export default function App() {
   const tabs = useWorkspace((s) => s.tabs)
   const toast = useWorkspace((s) => s.toast)
   const dialog = useWorkspace((s) => s.dialog)
+  const terminalVisible = useWorkspace((s) => s.terminalVisible)
+  const desktop = isTauri()
+  // Monta o painel na primeira abertura e mantém (a sessão do shell continua viva).
+  const [terminalOpened, setTerminalOpened] = useState(false)
+  useEffect(() => {
+    if (terminalVisible) setTerminalOpened(true)
+  }, [terminalVisible])
   const active = useWorkspace((s) => s.active)
   const lang = useSettings((s) => s.lang)
 
@@ -59,7 +68,10 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
       const ws = useWorkspace.getState()
-      if (mod && e.shiftKey && e.key.toLowerCase() === 'g') {
+      if (e.ctrlKey && e.key === '`' && isTauri()) {
+        e.preventDefault()
+        ws.setTerminal(!ws.terminalVisible)
+      } else if (mod && e.shiftKey && e.key.toLowerCase() === 'g') {
         e.preventDefault()
         if (ws.fs) ws.showSidebar('git')
       } else if (mod && e.key.toLowerCase() === 'b') {
@@ -111,6 +123,11 @@ export default function App() {
             <EmptyEditor />
           ) : (
             <Welcome />
+          )}
+          {desktop && terminalOpened && (
+            <Suspense fallback={null}>
+              <TerminalPanel />
+            </Suspense>
           )}
         </div>
       </div>
@@ -276,6 +293,19 @@ function EmptyEditor() {
   )
 }
 
+/** Só na versão web: o app desktop já funciona offline e não usa service worker. */
+function OfflineStatus() {
+  const t = useT()
+  const [offlineReady, setOfflineReady] = useState(false)
+  useRegisterSW({ onOfflineReady: () => setOfflineReady(true), onRegistered: (r) => r?.active && setOfflineReady(true) })
+  if (!offlineReady) return null
+  return (
+    <span className="status-item muted" title={t('status.offlineReady')}>
+      <IconCheck size={13} /> {t('status.offlineReadyShort')}
+    </span>
+  )
+}
+
 function StatusBar() {
   const t = useT()
   const fs = useWorkspace((s) => s.fs)
@@ -288,9 +318,7 @@ function StatusBar() {
   const progress = useGit((s) => s.progress)
   const tabFocus = useWorkspace((s) => s.tabFocus)
   const { set, lang } = useSettings()
-  const [offlineReady, setOfflineReady] = useState(false)
-
-  useRegisterSW({ onOfflineReady: () => setOfflineReady(true), onRegistered: (r) => r?.active && setOfflineReady(true) })
+  const terminalVisible = useWorkspace((s) => s.terminalVisible)
 
   return (
     <footer className="status-bar">
@@ -318,10 +346,17 @@ function StatusBar() {
         </span>
       )}
       <div className="spacer" />
-      {offlineReady && (
-        <span className="status-item muted" title={t('status.offlineReady')}>
-          <IconCheck size={13} /> {t('status.offlineReadyShort')}
-        </span>
+      {isTauri() ? (
+        <button
+          className="status-item status-btn"
+          aria-pressed={terminalVisible}
+          title={t('terminal.toggle')}
+          onClick={() => useWorkspace.getState().setTerminal(!terminalVisible)}
+        >
+          <IconTerminal size={13} /> {t('terminal.title')}
+        </button>
+      ) : (
+        <OfflineStatus />
       )}
       {active && (
         <>

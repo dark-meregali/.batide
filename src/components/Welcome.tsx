@@ -4,7 +4,10 @@ import { useWorkspace } from '../store/workspace'
 import { dialogs } from '../ui/dialogs'
 import { BrowserFs, createBrowserProject, deleteBrowserProject, listBrowserProjects } from '../fs/browserFs'
 import { localFsSupported, pickLocalFolder } from '../fs/localFs'
-import { IconGit, IconGlobe, IconLaptop, IconLogo, IconPlus, IconTrash } from './Icons'
+import { IconClose, IconGit, IconGlobe, IconLaptop, IconLogo, IconPlus, IconTrash } from './Icons'
+import { TauriFs } from '../fs/tauriFs'
+import { isTauri } from '../platform'
+import { useSettings } from '../store/settings'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
 const mod = isMac ? '⌘' : 'Ctrl'
@@ -19,7 +22,24 @@ export function Welcome() {
     reload()
   }, [])
 
+  const recentFolders = useSettings((s) => s.recentFolders)
+
+  /** App desktop: abre a pasta pelo Rust e guarda nas recentes. */
+  const openFolder = async (path: string) => {
+    await ws.openProject(new TauriFs(path))
+    if (useWorkspace.getState().fs) {
+      const rest = useSettings.getState().recentFolders.filter((p) => p !== path)
+      useSettings.getState().set({ recentFolders: [path, ...rest].slice(0, 8) })
+    }
+  }
+
   const openLocal = async () => {
+    if (isTauri()) {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const dir = await open({ directory: true, multiple: false, title: t('welcome.openLocal') })
+      if (typeof dir === 'string') await openFolder(dir)
+      return
+    }
     if (!localFsSupported()) return ws.notify(t('welcome.openLocalUnsupported'))
     try {
       const fs = await pickLocalFolder()
@@ -72,6 +92,29 @@ export function Welcome() {
             <button className="welcome-action" onClick={() => ws.setDialog('clone')}>
               <IconGit /> {t('welcome.clone')}
             </button>
+
+            {recentFolders.length > 0 && (
+              <>
+                <h2 className="mt">{t('welcome.recentFolders')}</h2>
+                <ul className="project-list">
+                  {recentFolders.map((path) => (
+                    <li key={path}>
+                      <button className="project-link" title={path} onClick={() => openFolder(path)}>
+                        <IconLaptop size={14} /> {new TauriFs(path).name}
+                      </button>
+                      <button
+                        className="icon-btn"
+                        title={t('welcome.forget')}
+                        aria-label={`${t('welcome.forget')} ${path}`}
+                        onClick={() => useSettings.getState().set({ recentFolders: recentFolders.filter((p) => p !== path) })}
+                      >
+                        <IconClose size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
             <h2 className="mt">{t('welcome.recentBrowser')}</h2>
             {projects.length === 0 && <p className="muted">{t('welcome.none')}</p>}
