@@ -61,13 +61,13 @@ function statementIndent(lines: string[], line: number) {
 }
 
 /** Já existe um fechamento (end/elsif/else/exception/when) para o bloco aberto nesta indentação? */
-function hasCloser(lines: string[], line: number, base: string) {
+function hasCloser(lines: string[], line: number, base: string, closers = /^(end|elsif|else|exception|when)\b/i) {
   for (let i = line + 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue
     const ind = indentOf(lines[i]).length
     if (ind > base.length) continue
     // Um "end" mais à esquerda fecha o bloco de fora, não este.
-    return ind === base.length && /^(end|elsif|else|exception|when)\b/i.test(lines[i].trim())
+    return ind === base.length && closers.test(lines[i].trim())
   }
   return false
 }
@@ -82,6 +82,8 @@ function parentLine(lines: string[], line: number) {
 }
 
 const UNIT_HEADER = /^\s*(create\s+(or\s+replace\s+)?)?(procedure|function|package|trigger|type\s+body)\b/i
+/** Nome da unidade no cabeçalho, sem o schema: "package body owner.pck" → "pck". */
+const UNIT_NAME = /\b(?:procedure|function|package(?:\s+body)?|type\s+body)\s+(?:[\w$#]+\.)?([\w$#]+)/i
 
 export function plsqlEnter({ lines, line, column, tabSize }: EnterInput): EnterResult | null {
   const text = lines[line]
@@ -96,9 +98,9 @@ export function plsqlEnter({ lines, line, column, tabSize }: EnterInput): EnterR
   const lastWord = /\w+$/.exec(trimmed)?.[0] ?? ''
   const kw = (s: string) => (/[A-Z]/.test(lastWord) && lastWord === lastWord.toUpperCase() ? s.toUpperCase() : s)
 
-  const block = (base: string, closer: string | null, replaceLine?: string): EnterResult => {
+  const block = (base: string, closer: string | null, replaceLine?: string, closers?: RegExp): EnterResult => {
     const inner = base + unit
-    const close = closer && !hasCloser(lines, line, base) ? [base + kw(closer)] : []
+    const close = closer && !hasCloser(lines, line, base, closers) ? [base + closer] : []
     // Já existe o "--" de abertura logo abaixo: reaproveita em vez de duplicar.
     const next = lines[line + 1]
     if (next !== undefined && next.trim() === '--' && indentOf(next) === inner) {
@@ -113,7 +115,9 @@ export function plsqlEnter({ lines, line, column, tabSize }: EnterInput): EnterR
     let start = line
     while (start > 0 && !UNIT_HEADER.test(lines[start]) && !/;\s*$/.test(lines[start - 1])) start--
     if (!UNIT_HEADER.test(lines[start])) return null // cursor … is, type … is: não é bloco
-    return block(indentOf(lines[start]), null)
+    // Fecha com "end nome;" (a não ser que o corpo já exista abaixo).
+    const name = UNIT_NAME.exec(lines.slice(start, line + 1).join(' '))?.[1]
+    return block(indentOf(lines[start]), name ? `${kw('end')} ${name};` : null, undefined, /^(begin|end)\b/i)
   }
 
   const base = indentOf(text)
@@ -135,13 +139,13 @@ export function plsqlEnter({ lines, line, column, tabSize }: EnterInput): EnterR
   if (lower === 'begin' && parent && (UNIT_HEADER.test(parent) || /^declare$/i.test(parent.trim()))) {
     // begin digitado dentro das declarações volta para a coluna da procedure/declare.
     const b = indentOf(parent)
-    return block(b, 'end;', b !== base ? b + trimmed : undefined)
+    return block(b, kw('end;'), b !== base ? b + trimmed : undefined)
   }
-  if (/^if\b.*\bthen$/.test(lower)) return block(base, 'end if;')
+  if (/^if\b.*\bthen$/.test(lower)) return block(base, kw('end if;'))
   if (/^(elsif|when)\b.*\bthen$/.test(lower) || lower === 'else') return block(base, null)
-  if (/\bloop$/.test(lower) && !/^end\b/.test(lower)) return block(base, 'end loop;')
-  if (/^case\b/.test(lower) && !lower.endsWith(';')) return block(base, 'end case;')
-  if (lower === 'begin') return block(base, 'end;')
+  if (/\bloop$/.test(lower) && !/^end\b/.test(lower)) return block(base, kw('end loop;'))
+  if (/^case\b/.test(lower) && !lower.endsWith(';')) return block(base, kw('end case;'))
+  if (lower === 'begin') return block(base, kw('end;'))
 
   // Fim de comando: separador "--" na indentação onde o comando começou.
   if (lower.endsWith(';') && !/^end\b/.test(lower)) {

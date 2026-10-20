@@ -9,7 +9,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Versão nova só entra quando a pessoa pede (aviso na barra de status): recarregar
+      // sozinho no meio do uso perderia o que não foi salvo.
+      registerType: 'prompt',
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'Batide',

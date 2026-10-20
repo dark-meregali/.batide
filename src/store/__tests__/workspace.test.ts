@@ -235,3 +235,31 @@ describe('deleteEntry', () => {
     expect(ws().tabs).toEqual([])
   })
 })
+
+describe('resolveUnsaved (antes de recarregar para a versão nova)', () => {
+  it('sem alterações pendentes: segue sem perguntar', async () => {
+    const a = answer()
+    expect(await ws().resolveUnsaved('x')).toBe(true)
+    expect(a.asked).toHaveLength(0)
+  })
+
+  it('com alterações: salvar tudo salva e mantém o projeto aberto; cancelar não segue', async () => {
+    ws().openFile('/src/a.ts')
+    ws().setDirty('/src/a.ts', true)
+    answer(null)
+    expect(await ws().resolveUnsaved('x')).toBe(false)
+    answered?.unsubscribe()
+    answer('save')
+    expect(await ws().resolveUnsaved('x')).toBe(true)
+    expect(editorBridge.save).toHaveBeenCalledWith('/src/a.ts')
+    expect(ws().fs).not.toBeNull()
+  })
+
+  it('descartar segue sem salvar', async () => {
+    ws().openFile('/src/a.ts')
+    ws().setDirty('/src/a.ts', true)
+    answer('discard')
+    expect(await ws().resolveUnsaved('x')).toBe(true)
+    expect(editorBridge.save).not.toHaveBeenCalled()
+  })
+})
