@@ -32,6 +32,18 @@ beforeEach(async () => {
   useSettings.setState({ proxyUrl: '' })
 })
 
+describe('initRepo', () => {
+  it('transforma uma pasta comum em repositório na branch main', async () => {
+    await createBrowserProject(`novo${n}`)
+    const plain = `${PROJECTS_DIR}/novo${n}`
+    await pfs.writeFile(`${plain}/a.sql`, 'x', { encoding: 'utf8', mode: 0o666 })
+    await git.initRepo(plain)
+    expect(await git.isRepo(plain)).toBe(true)
+    expect(await git.currentBranch(plain)).toBe('main')
+    expect(await git.status(plain)).toEqual([{ file: 'a.sql', status: 'U' }])
+  })
+})
+
 describe('isRepo', () => {
   it('reconhece repositórios e pastas comuns', async () => {
     await createBrowserProject(`plain${n}`)

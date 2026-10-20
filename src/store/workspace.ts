@@ -25,6 +25,8 @@ export const editorBridge: {
   reloadFromDisk?: (path: string) => Promise<void>
   /** Salva no disco o conteúdo atual do editor para esse arquivo. */
   save?: (path: string) => Promise<void>
+  /** Liga/desliga o modo "Tab move o foco" do editor (Ctrl+M). */
+  toggleTabFocus?: () => void
 } = {}
 
 /** Abas de diff usam o prefixo "diff:" antes do caminho do arquivo. */
@@ -44,6 +46,8 @@ interface WorkspaceState {
   sidebarView: SidebarView
   /** Tela estreita (celular): a barra lateral sobrepõe o editor e sai da frente ao abrir arquivo. */
   narrow: boolean
+  /** Editor no modo "Tab move o foco" (Ctrl+M) em vez de indentar. */
+  tabFocus: boolean
   toast: string | null
   dialog: Dialog
   editing: Editing
@@ -92,6 +96,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     sidebarVisible: true,
     sidebarView: 'explorer',
     narrow: false,
+    tabFocus: false,
     toast: null,
     dialog: null,
     editing: null,

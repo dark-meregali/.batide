@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { monaco, getModel, saveFile, saveViewState, languageLabel } from '../editor/monaco'
-import { DIFF_PREFIX, useWorkspace } from '../store/workspace'
+import { DIFF_PREFIX, editorBridge, useWorkspace } from '../store/workspace'
 import { useSettings } from '../store/settings'
 
 /** Carregado sob demanda (React.lazy): o Monaco só baixa quando o primeiro arquivo abre. */
@@ -51,6 +51,16 @@ export default function Editor() {
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
       editor.getAction('editor.action.formatDocument')?.run()
     })
+    // Modo "Tab move o foco" (Ctrl+M): mostrado na barra de status para não virar armadilha.
+    const toggleTabFocus = () => {
+      const on = !editor.getOption(monaco.editor.EditorOption.tabFocusMode)
+      editor.updateOptions({ tabFocusMode: on })
+      useWorkspace.setState({ tabFocus: on })
+    }
+    // Ctrl+M em todos os sistemas (no Mac, CtrlCmd seria Cmd+M, que minimiza a janela).
+    const isMac = navigator.platform.toLowerCase().includes('mac')
+    editor.addCommand((isMac ? monaco.KeyMod.WinCtrl : monaco.KeyMod.CtrlCmd) | monaco.KeyCode.KeyM, toggleTabFocus)
+    editorBridge.toggleTabFocus = toggleTabFocus
     editor.onDidChangeCursorPosition((e) =>
       useWorkspace.setState({ cursor: { line: e.position.lineNumber, col: e.position.column } }),
     )

@@ -53,6 +53,19 @@ describe('refresh', () => {
   })
 })
 
+describe('init', () => {
+  it('inicializa o repositório no projeto aberto e atualiza o painel', async () => {
+    await createBrowserProject(`plain-init${n}`)
+    const plain = new BrowserFs(`plain-init${n}`)
+    await plain.writeFile('/x.ts', '1')
+    await ws().openProject(plain)
+    await g().refresh()
+    expect(g().isRepo).toBe(false)
+    await g().init()
+    expect(g()).toMatchObject({ isRepo: true, branch: 'main', changes: [{ file: 'x.ts', status: 'U' }], busy: null })
+  })
+})
+
 describe('commit', () => {
   it('exige mensagem', async () => {
     await fs.writeFile('/a.txt', 'mudou')

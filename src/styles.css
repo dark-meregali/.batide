@@ -644,3 +644,14 @@ kbd {
 
 /* Placeholders no cinza do tema (o padrão do navegador some no fundo escuro). */
 ::placeholder { color: var(--text-faint); opacity: 1; }
+
+/* Botões cheios: o contorno de foco fica fora do botão, na cor do texto (visível sobre o violeta). */
+.btn-primary:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* Abas: nomes longos com reticências; barra de rolagem fina ao passar o mouse. */
+.tab-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.tab-bar:hover { scrollbar-width: thin; }
+.tab-bar::-webkit-scrollbar { height: 3px; }
+
+.scm-body .scm-empty { padding: 4px 0 6px; }
+.toast[hidden] { display: none; }

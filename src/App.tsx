@@ -12,7 +12,7 @@ import { SourceControl } from './components/SourceControl'
 import { BranchPicker, CloneDialog } from './components/GitDialogs'
 import { useGit } from './store/git'
 import { completeLoginFromUrl, useAuth } from './github/auth'
-import { DIFF_PREFIX } from './store/workspace'
+import { DIFF_PREFIX, editorBridge } from './store/workspace'
 import { t as tr } from './i18n'
 import {
   IconBranch, IconCheck, IconClose, IconFilePlus, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings,
@@ -115,7 +115,10 @@ export default function App() {
         </div>
       </div>
       <StatusBar />
-      {toast && <div className="toast">{toast}</div>}
+      {/* Sempre montado: leitores de tela só anunciam mudanças em regiões que já existiam. */}
+      <div className="toast" role="status" aria-live="polite" hidden={!toast}>
+        {toast}
+      </div>
       {dialog === 'clone' && <CloneDialog onClose={() => useWorkspace.getState().setDialog(null)} />}
       {dialog === 'branch' && <BranchPicker onClose={() => useWorkspace.getState().setDialog(null)} />}
       <DialogHost />
@@ -195,6 +198,11 @@ function TabBar() {
   const ws = useWorkspace.getState()
   const bar = useRef<HTMLDivElement>(null)
 
+  // Com muitas abas, a ativa sempre rola para dentro da vista.
+  useEffect(() => {
+    bar.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  }, [active, tabs.length])
+
   // Setas movem o foco entre abas; Enter/Espaço ativa (padrão ARIA de tabs).
   const onKeyDown = (e: React.KeyboardEvent) => {
     const els = [...bar.current!.querySelectorAll<HTMLElement>('[role="tab"]')]
@@ -260,6 +268,7 @@ function EmptyEditor() {
       </div>
       <dl className="shortcuts">
         <dt>{t('shortcut.save')}</dt><dd><kbd>{MOD}</kbd><kbd>S</kbd></dd>
+        <dt>{t('shortcut.tabFocus')}</dt><dd><kbd>Ctrl</kbd><kbd>M</kbd></dd>
         <dt>{t('shortcut.toggleSidebar')}</dt><dd><kbd>{MOD}</kbd><kbd>B</kbd></dd>
         <dt>{t('git.title')}</dt><dd><kbd>{MOD}</kbd><kbd>Shift</kbd><kbd>G</kbd></dd>
       </dl>
@@ -277,6 +286,7 @@ function StatusBar() {
   const branch = useGit((s) => s.branch)
   const busy = useGit((s) => s.busy)
   const progress = useGit((s) => s.progress)
+  const tabFocus = useWorkspace((s) => s.tabFocus)
   const { set, lang } = useSettings()
   const [offlineReady, setOfflineReady] = useState(false)
 
@@ -294,6 +304,11 @@ function StatusBar() {
         <button className="status-item status-btn" onClick={() => useWorkspace.getState().setDialog('branch')}>
           <IconBranch size={13} />
           {branch ?? 'HEAD'}
+        </button>
+      )}
+      {tabFocus && (
+        <button className="status-item status-btn" title={t('shortcut.tabFocusOff')} onClick={() => editorBridge.toggleTabFocus?.()}>
+          {t('shortcut.tabFocus')}
         </button>
       )}
       {busy && (

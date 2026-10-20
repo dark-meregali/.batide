@@ -95,6 +95,7 @@ export function Welcome() {
               <dt>{t('shortcut.save')}</dt><dd><kbd>{mod}</kbd><kbd>S</kbd></dd>
               <dt>{t('shortcut.format')}</dt><dd><kbd>Shift</kbd><kbd>Alt</kbd><kbd>F</kbd></dd>
               <dt>{t('shortcut.closeTab')}</dt><dd><kbd>Alt</kbd><kbd>W</kbd></dd>
+              <dt>{t('shortcut.tabFocus')}</dt><dd><kbd>Ctrl</kbd><kbd>M</kbd></dd>
               <dt>{t('shortcut.toggleSidebar')}</dt><dd><kbd>{mod}</kbd><kbd>B</kbd></dd>
               <dt>{t('git.title')}</dt><dd><kbd>{mod}</kbd><kbd>Shift</kbd><kbd>G</kbd></dd>
               <dt>{t('shortcut.commands')}</dt><dd><kbd>F1</kbd></dd>

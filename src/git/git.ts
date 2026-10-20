@@ -28,6 +28,10 @@ export const isRepo = (dir: string) =>
     () => false,
   )
 
+export async function initRepo(dir: string) {
+  await git.init({ fs, dir, defaultBranch: 'main' })
+}
+
 export async function clone(url: string, name: string, onProgress?: ProgressCallback) {
   const dir = `${PROJECTS_DIR}/${name}`
   try {
