@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { formatPlsql } from '../plsqlFormat'
 
-const upperWords = new Set([
+const keywords = new Set([
   'CREATE', 'OR', 'REPLACE', 'PACKAGE', 'BODY', 'AS', 'IS', 'PROCEDURE', 'FUNCTION', 'RETURN', 'IN', 'OUT',
   'NUMBER', 'VARCHAR2', 'BEGIN', 'END', 'SELECT', 'SUM', 'INTO', 'FROM', 'WHERE', 'IF', 'THEN', 'ELSIF', 'ELSE',
   'LOOP', 'FOR', 'EXCEPTION', 'WHEN', 'OTHERS', 'NO_DATA_FOUND', 'RAISE', 'NULL', 'CASE', 'DECLARE', 'CURSOR',
   'DBMS_OUTPUT', 'PUT_LINE', 'AND', 'NOT',
 ])
-const fmt = (s: string) => formatPlsql(s, { indent: '  ', upperWords })
+const fmt = (s: string) => formatPlsql(s, { indent: '  ', keywords, keywordCase: 'upper' })
+
+describe('formatPlsql: caixa das palavras-chave', () => {
+  it('padrão da equipe: palavras-chave em minúsculas', () => {
+    const out = formatPlsql('BEGIN\nIF X > 0 THEN\nDBMS_OUTPUT.PUT_LINE(\'OK\');\nEND IF;\nEND;', { indent: '  ', keywords })
+    expect(out).toBe("begin\n  if X > 0 then\n    dbms_output.put_line('OK');\n  end if;\nend;\n")
+  })
+})
 
 describe('formatPlsql', () => {
   it('indenta package body com procedure, select e exceção', () => {

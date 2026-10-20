@@ -145,6 +145,19 @@ export async function createFiles(page: Page, ...paths: string[]) {
   }
 }
 
+/**
+ * Digita linhas no editor usando Shift+Enter (quebra comum). Em PL/SQL o Enter aplica o
+ * padrão da equipe (esqueleto de blocos e "--"), o que mudaria o texto digitado.
+ */
+export async function typeLines(page: Page, text: string) {
+  await page.locator('.editor-host:not([hidden]) .monaco-editor .view-lines').click()
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    if (i > 0) await page.keyboard.press('Shift+Enter')
+    await page.keyboard.type(lines[i])
+  }
+}
+
 /** Digita no editor Monaco visível. */
 export async function typeInEditor(page: Page, text: string) {
   await page.locator('.editor-host:not([hidden]) .monaco-editor .view-lines').click()

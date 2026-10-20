@@ -1,14 +1,14 @@
-import { test, expect, typeInEditor, editorText, newProject, createFiles } from './fixtures'
+import { test, expect, typeLines, editorText, newProject, createFiles } from './fixtures'
 
 test('cria projeto no navegador, edita PL/SQL, formata e salva', async ({ page }) => {
   await page.goto('/')
   await newProject(page, 'meu-projeto')
   await createFiles(page, 'pkg_vendas.pkb')
 
-  await typeInEditor(page, 'begin\nnull;\nend;')
+  await typeLines(page, 'begin\nnull;\nend;')
   await expect(page.locator('.tab-close.dirty')).toHaveCount(1)
   await page.keyboard.press('Shift+Alt+F')
-  await expect.poll(() => editorText(page)).toBe('BEGIN\n  NULL;\nEND;\n')
+  await expect.poll(() => editorText(page)).toBe('begin\n  null;\nend;\n')
   await page.keyboard.press('Control+s')
   await expect(page.locator('.tab-close.dirty')).toHaveCount(0)
   await expect(page.locator('.status-bar')).toContainText('PL/SQL')
@@ -17,7 +17,7 @@ test('cria projeto no navegador, edita PL/SQL, formata e salva', async ({ page }
   await page.reload()
   await page.getByText('meu-projeto').click()
   await page.getByText('pkg_vendas.pkb').click()
-  await expect.poll(() => editorText(page)).toBe('BEGIN\n  NULL;\nEND;\n')
+  await expect.poll(() => editorText(page)).toBe('begin\n  null;\nend;\n')
 })
 
 test('troca o idioma da interface', async ({ page }) => {
