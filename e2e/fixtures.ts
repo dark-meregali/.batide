@@ -15,6 +15,8 @@ export class FakeGithub {
   readonly bare = join(this.root, 'demo.git')
   private work = join(this.root, 'work')
   readonly cloneUrl = 'https://github.com/test/demo.git'
+  /** Atraso artificial nas respostas do git, para observar estados de carregamento. */
+  delayMs = 0
 
   constructor() {
     execFileSync('git', ['init', '-q', '--bare', '-b', 'main', this.bare])
@@ -55,6 +57,7 @@ export class FakeGithub {
   async install(page: Page) {
     await page.route(`${PROXY}/github.com/test/demo.git/**`, async (route) => {
       const req = route.request()
+      if (this.delayMs) await new Promise((r) => setTimeout(r, this.delayMs))
       const url = new URL(req.url())
       const service = url.pathname.endsWith('/info/refs') ? url.searchParams.get('service')! : url.pathname.split('/').pop()!
       const cmd = service.replace(/^git-/, '')

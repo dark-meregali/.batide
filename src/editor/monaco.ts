@@ -6,6 +6,7 @@ import CssWorker from 'monaco-editor/language/css/css.worker?worker'
 import HtmlWorker from 'monaco-editor/language/html/html.worker?worker'
 import { PLSQL_EXTENSIONS, registerPlsql } from './plsql'
 import { withFunctionTokens } from './functionTokens'
+import { batideDark } from './theme'
 // Fonte cursiva dos tokens em itálico (nomes de função, comentários). Mesma largura da JetBrains Mono.
 import '@fontsource/victor-mono/500-italic.css'
 import { DIFF_PREFIX, editorBridge, useWorkspace } from '../store/workspace'
@@ -53,60 +54,7 @@ for (const d of [tsDefaults, jsDefaults]) {
   d.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false, diagnosticCodesToIgnore: [2307, 2792, 7016] })
 }
 
-monaco.editor.defineTheme('batide-dark', {
-  base: 'vs-dark',
-  inherit: true,
-  rules: [
-    { token: '', foreground: 'd6d7dd' },
-    { token: 'comment', foreground: '80849a', fontStyle: 'italic' },
-    { token: 'keyword', foreground: 'a99bff' },
-    { token: 'type', foreground: '4fd1c5' },
-    { token: 'type.identifier', foreground: '4fd1c5' },
-    { token: 'predefined', foreground: '7cc4ff' },
-    { token: 'function', foreground: '89b4fa', fontStyle: 'italic' },
-    { token: 'string', foreground: 'a6d189' },
-    { token: 'string.escape', foreground: 'e5c890' },
-    { token: 'number', foreground: 'f2a971' },
-    { token: 'variable', foreground: 'f28fad' },
-    { token: 'operator', foreground: '99a0b3' },
-    { token: 'delimiter', foreground: '7d8294' },
-    { token: 'tag', foreground: 'a99bff' },
-    { token: 'attribute.name', foreground: '7cc4ff' },
-    { token: 'attribute.value', foreground: 'a6d189' },
-    { token: 'identifier.quote', foreground: 'e5c890' },
-  ],
-  colors: {
-    'editor.background': '#0e0f13',
-    'editor.foreground': '#d6d7dd',
-    'editorLineNumber.foreground': '#62667a',
-    'editorLineNumber.activeForeground': '#9a9db0',
-    'editor.lineHighlightBackground': '#16171d',
-    'editor.lineHighlightBorder': '#00000000',
-    'editor.selectionBackground': '#8b7cff40',
-    'editor.inactiveSelectionBackground': '#8b7cff20',
-    'editorCursor.foreground': '#a99bff',
-    'editorIndentGuide.background1': '#1d1f27',
-    'editorIndentGuide.activeBackground1': '#34374a',
-    'editorWhitespace.foreground': '#2a2c37',
-    'editorWidget.background': '#15161c',
-    'editorWidget.border': '#25272f',
-    'editorSuggestWidget.background': '#15161c',
-    'editorSuggestWidget.border': '#25272f',
-    'editorSuggestWidget.selectedBackground': '#24253a',
-    'editorHoverWidget.background': '#15161c',
-    'editorHoverWidget.border': '#25272f',
-    'input.background': '#0e0f13',
-    'input.border': '#25272f',
-    'focusBorder': '#8b7cff80',
-    'scrollbarSlider.background': '#ffffff12',
-    'scrollbarSlider.hoverBackground': '#ffffff20',
-    'scrollbarSlider.activeBackground': '#ffffff2a',
-    'editorGutter.background': '#0e0f13',
-    'minimap.background': '#0e0f13',
-    'editorBracketMatch.background': '#8b7cff25',
-    'editorBracketMatch.border': '#8b7cff60',
-  },
-})
+monaco.editor.defineTheme('batide-dark', batideDark)
 
 const extLanguages: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', mts: 'typescript', cts: 'typescript',

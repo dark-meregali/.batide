@@ -119,6 +119,15 @@ describe('abas', () => {
     expect(ws().tabs).toHaveLength(0)
   })
 
+  it('em tela estreita, abrir um arquivo tira a barra lateral da frente', () => {
+    useWorkspace.setState({ narrow: true, sidebarVisible: true })
+    ws().openFile('/README.md')
+    expect(ws().sidebarVisible).toBe(false)
+    useWorkspace.setState({ narrow: false, sidebarVisible: true })
+    ws().openFile('/src/a.ts')
+    expect(ws().sidebarVisible).toBe(true)
+  })
+
   it('abre aba de diff separada da aba do arquivo', () => {
     ws().openFile('/README.md')
     ws().openDiff('/README.md')

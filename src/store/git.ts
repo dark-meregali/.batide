@@ -23,6 +23,8 @@ interface GitState {
   message: string
 
   refresh: () => Promise<void>
+  /** Transforma o projeto aberto (sem git) em repositório. */
+  init: () => Promise<void>
   setMessage: (m: string) => void
   commit: () => Promise<void>
   push: () => Promise<void>
@@ -99,6 +101,14 @@ export const useGit = create<GitState>()((set, get) => {
       if ((useWorkspace.getState().fs as BrowserFs | null)?.root !== dir) return
       set({ dir, isRepo: true, branch, changes, local: br.local, remote: br.remote, slug, ...ab })
     },
+
+    init: () =>
+      run('init', async () => {
+        const fs = useWorkspace.getState().fs
+        if (!(fs instanceof BrowserFs)) return
+        await (await loadGit()).initRepo(fs.root)
+        await get().refresh()
+      }),
 
     setMessage(message) {
       set({ message })
