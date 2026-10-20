@@ -133,3 +133,93 @@ END;
 `)
   })
 })
+
+describe('formatPlsql: padrão da equipe com alinhamentos', () => {
+  const lower = (s: string) => formatPlsql(s, { indent: '  ', keywords: new Set([...keywords, 'CHAR', 'NVL', 'INSERT', 'VALUES', 'SYSDATE', 'OPEN', 'FETCH', 'CLOSE', 'ROWTYPE', 'RAISE_APPLICATION_ERROR', 'REGEXP_REPLACE', 'SQLERRM', 'IS', 'NULL']) })
+
+  // Mesmo estilo da procedure de exemplo da equipe: parâmetros com vírgula na frente,
+  // "rio" do select, colunas do insert alinhadas e comentários no fim das linhas.
+  const canon = `procedure prc_baixa_pedido(p_id_pedido in number
+                          ,p_id_conta  in number
+                          ,p_mensagem  out varchar2
+                          ,p_status    out char) is
+  --
+  cursor c_pedido is
+    select p.id_pedido
+          ,p.id_empresa
+          ,nvl(p.desconto, 0) desconto
+      from pedidos p
+     where p.id_pedido = p_id_pedido
+       and p.id_conta = p_id_conta;
+  --
+  r_pedido c_pedido%rowtype;
+  --
+  cursor c_itens(pc_id_pedido number) is
+    select i.id_item
+          ,i.quantidade
+      from pedidos_itens i
+     where i.id_pedido = pc_id_pedido
+       and i.status != 'CA';
+  --
+  v_total number;
+  --
+begin
+  --
+  if (p_id_pedido is null) then
+    --
+    raise_application_error(-20001, 'Pedido não informado.');
+    --
+  elsif (p_id_conta is null) then
+    --
+    raise_application_error(-20001, 'Conta não informada.');
+    --
+  end if;
+  --
+  open  c_pedido;
+  fetch c_pedido into r_pedido;
+  close c_pedido;
+  --
+  for r_itens in c_itens(r_pedido.id_pedido) loop
+    --
+    if (v_total is null) then
+      --
+      v_total := pck_util.fnc_total(p_id_conta
+                                   ,r_pedido.id_empresa);
+      --
+    end if;
+    --
+    insert into baixas (id_baixa,
+                        id_item,
+                        quantidade,
+                        data_hora)
+                 values(seq_baixas.nextval,
+                        r_itens.id_item, -- id_item
+                        r_itens.quantidade,--quantidade
+                        sysdate
+                        );
+    --
+  end loop;
+  --
+  p_status := 'F';
+  --
+exception
+  when others then
+    --
+    p_status := 'E';
+    p_mensagem := regexp_replace(sqlerrm,'^ORA-[0-9]+: ', null);
+    --
+end prc_baixa_pedido;
+`
+
+  it('código já no padrão sai idêntico (não desmonta parâmetros, select e insert alinhados)', () => {
+    expect(lower(canon)).toBe(canon)
+  })
+
+  it('reindenta blocos desalinhados e leva as linhas de continuação junto, sem perder o alinhamento', () => {
+    // Desloca cada comando inteiro (primeira linha e continuações) para a esquerda ou direita.
+    const lines = canon.split('\n')
+    const shifted = lines.map((l, i) => (i >= 5 && i < 12 ? '      ' + l : i >= 49 && i < 58 ? l.slice(4) : l)).join('\n')
+    expect(shifted).not.toBe(canon)
+    expect(lower(shifted)).toBe(canon)
+  })
+})

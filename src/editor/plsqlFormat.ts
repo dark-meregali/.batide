@@ -1,7 +1,9 @@
 /**
  * Formatador de PL/SQL: reindenta blocos e padroniza a caixa das palavras reservadas (minúsculas, padrão da equipe),
  * mantendo as quebras de linha do autor (formatadores de SQL genéricos desmontam
- * procedures e packages).
+ * procedures e packages). Só a primeira linha de cada comando é reposicionada; as linhas de
+ * continuação (parâmetros, "rio" do select, colunas do insert) andam junto com ela, mantendo
+ * o alinhamento do autor.
  */
 
 type Frame = 'decl' | 'block' | 'exc' | 'if' | 'loop' | 'case' | 'when'
@@ -31,6 +33,9 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
   let inComment = false
   let inString = false
   let stmt: string[] = [] // palavras do comando atual (desde o último ';' ou abertura de bloco)
+  // Indentação original e nova da primeira linha do comando atual.
+  let anchorOrig = 0
+  let anchorNew = 0
 
   const top = () => stack[stack.length - 1]
 
@@ -62,13 +67,28 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
 
     // ---- indentação desta linha ----
     let level = stack.length
+    let continuation = false
     if (first === 'END') level -= top() === 'when' ? 2 : 1
     else if (first === 'BEGIN' && top() === 'decl') level -= 1
     else if ((first === 'ELSE' || first === 'ELSIF') && (top() === 'if' || top() === 'when')) level -= 1
     else if (first === 'EXCEPTION' && top() === 'block') level -= 1
     else if (first === 'WHEN' && top() === 'when') level -= 1
-    else if (stmt.length > 0 && !line.startsWith(')') && !line.startsWith('--')) level += 1 // continuação
+    else continuation = stmt.length > 0
     level = Math.max(0, level)
+    const origIndent = raw.length - raw.trimStart().length
+    let indent: string
+    if (continuation) {
+      // Mantém a distância até a primeira linha do comando; sem recuo próprio, um nível a mais.
+      const offset = origIndent - anchorOrig
+      indent =
+        offset > 0
+          ? ' '.repeat(anchorNew + offset)
+          : opts.indent.repeat(level + (line.startsWith(')') || line.startsWith('--') ? 0 : 1))
+    } else {
+      indent = opts.indent.repeat(level)
+      anchorOrig = origIndent
+      anchorNew = indent.length
+    }
 
     // ---- atualiza a pilha de blocos, token a token ----
     const depthBefore = stack.length
@@ -119,7 +139,9 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
           stack.pop()
           break
       }
-      stmt = STMT_RESET.has(w) ? [] : [...stmt, w]
+      // "cursor c is" continua no select da linha de baixo.
+      const cursorIs = (w === 'IS' || w === 'AS') && stmt.includes('CURSOR')
+      stmt = STMT_RESET.has(w) && !cursorIs ? [] : [...stmt, w]
       prev = w
     }
     // Linha que abriu um bloco (ex.: "CASE r.id") não deixa as seguintes como continuação.
@@ -134,7 +156,7 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
       })
       .join('')
       .trimEnd()
-    out.push(opts.indent.repeat(level) + text)
+    out.push(indent + text)
   }
 
   // No máximo uma linha em branco seguida.
