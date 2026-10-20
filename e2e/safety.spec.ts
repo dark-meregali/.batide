@@ -109,10 +109,18 @@ test.describe('criar e renomear na árvore', () => {
 
   test('F2 renomeia inline', async ({ page }) => {
     await createFiles(page, 'velho.ts')
-    await page.locator('.tree-row', { hasText: 'velho.ts' }).click()
-    await page.keyboard.press('F2')
+    const row = page.locator('.tree-row', { hasText: 'velho.ts' })
+    await row.click()
     const input = page.locator('.tree-edit input')
-    await expect(input).toHaveValue('velho.ts')
+    // Abrir o arquivo leva o foco para o editor quando ele termina de carregar; se isso acontecer
+    // logo antes do F2, o atalho vai para o editor. Volta o foco para a árvore e tenta de novo.
+    await expect(async () => {
+      if (!(await input.count())) {
+        await row.focus()
+        await page.keyboard.press('F2')
+      }
+      await expect(input).toHaveValue('velho.ts', { timeout: 1000 })
+    }).toPass()
     await input.fill('novo.ts')
     await page.keyboard.press('Enter')
     await expect(page.locator('.tree-row', { hasText: 'novo.ts' })).toBeVisible()
