@@ -66,13 +66,13 @@ export const IconLogo = ({ size = 28 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 512 512">
     <defs>
       <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor="#8b7cff" />
-        <stop offset="1" stopColor="#4fd1c5" />
+        <stop offset="0" stopColor="#ff4d4f" />
+        <stop offset="1" stopColor="#f2994a" />
       </linearGradient>
     </defs>
     <path d="M176 152 L96 256 L176 360" fill="none" stroke="url(#lg)" strokeWidth="44" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M336 152 L416 256 L336 360" fill="none" stroke="url(#lg)" strokeWidth="44" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M286 136 L226 376" fill="none" stroke="#e6e6ea" strokeWidth="40" strokeLinecap="round" />
+    <path d="M286 136 L226 376" fill="none" stroke="#ece6e6" strokeWidth="40" strokeLinecap="round" />
   </svg>
 )
 
