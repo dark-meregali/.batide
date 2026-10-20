@@ -16,7 +16,7 @@ import { DIFF_PREFIX, editorBridge } from './store/workspace'
 import { isTauri } from './platform'
 import { t as tr } from './i18n'
 import {
-  IconBranch, IconCheck, IconClose, IconFilePlus, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings, IconTerminal,
+  IconBranch, IconCheck, IconRefresh, IconClose, IconFilePlus, IconFiles, IconGit, IconGlobe, IconLaptop, IconLogo, IconSettings, IconTerminal,
 } from './components/Icons'
 
 const Editor = lazy(() => import('./components/Editor'))
@@ -297,7 +297,39 @@ function EmptyEditor() {
 function OfflineStatus() {
   const t = useT()
   const [offlineReady, setOfflineReady] = useState(false)
-  useRegisterSW({ onOfflineReady: () => setOfflineReady(true), onRegistered: (r) => r?.active && setOfflineReady(true) })
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onOfflineReady: () => setOfflineReady(true),
+    onRegisteredSW: (_url, r) => {
+      if (!r) return
+      if (r.active) setOfflineReady(true)
+      // Procura versão nova de hora em hora e sempre que a aba volta a ficar visível.
+      const check = () => navigator.onLine && r.update().catch(() => {})
+      setInterval(check, 60 * 60 * 1000)
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check())
+    },
+  })
+  const update = async () => {
+    if (!(await useWorkspace.getState().resolveUnsaved(tr('confirm.unsavedUpdate')))) return
+    const waiting = (await navigator.serviceWorker.getRegistration())?.waiting
+    if (!navigator.serviceWorker.controller && waiting) {
+      // Página aberta antes de existir service worker (primeira visita): ninguém avisa a troca,
+      // então recarrega quando a versão nova estiver ativa.
+      waiting.addEventListener('statechange', () => waiting.state === 'activated' && location.reload())
+      waiting.postMessage({ type: 'SKIP_WAITING' })
+      return
+    }
+    await updateServiceWorker(true)
+  }
+  if (needRefresh) {
+    return (
+      <button className="status-item status-btn status-update" title={t('status.updateTitle')} onClick={update}>
+        <IconRefresh size={13} /> {t('status.update')}
+      </button>
+    )
+  }
   if (!offlineReady) return null
   return (
     <span className="status-item muted" title={t('status.offlineReady')}>

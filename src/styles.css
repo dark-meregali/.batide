@@ -376,6 +376,7 @@ kbd {
 .sidebar-scrim { display: none; }
 .status-btn { border-radius: 4px; }
 .status-btn:hover { background: var(--bg-hover); color: var(--text); }
+.status-update { color: var(--accent-2); }
 
 /* ---- Toast ---- */
 

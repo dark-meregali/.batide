@@ -56,7 +56,7 @@ test.describe('padrão PL/SQL da equipe', () => {
           '    --',
           '  end if;',
           '  --',
-          'end;',
+          'end prc_teste;',
         ].join('\n'),
       )
   })
@@ -135,4 +135,24 @@ test.describe('caixa das palavras-chave PL/SQL (configurável)', () => {
     await page.keyboard.press('Shift+Alt+F')
     await expect.poll(() => editorText(page)).toMatch(/^BEGIN\n\s+NULL;\nEND;/)
   })
+})
+
+test('depois de "registro." o autocomplete mostra as colunas do cursor', async ({ page }) => {
+  await page.goto('/')
+  await newProject(page, 'oracle')
+  await createFiles(page, 'a.sql')
+  await typeLines(
+    page,
+    ['procedure p is', 'cursor c_teste is', 'select t.id_teste, t.nome nome_teste', 'from teste t;', 'r_teste c_teste;', 'begin', 'r_teste.'].join('\n'),
+  )
+  const rows = page.locator('.suggest-widget .monaco-list-row')
+  await expect(rows.first()).toBeVisible()
+  await expect(page.locator('.suggest-widget')).toContainText('id_teste')
+  await expect(page.locator('.suggest-widget')).toContainText('nome_teste')
+  await expect(page.locator('.suggest-widget')).not.toContainText('abs')
+  await expect(rows).toHaveCount(2)
+  // A lista mostra as duas linhas inteiras.
+  const list = await page.locator('.suggest-widget .monaco-list').boundingBox()
+  const row = await rows.first().boundingBox()
+  expect(list!.height).toBeGreaterThanOrEqual(row!.height * 2)
 })

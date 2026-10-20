@@ -57,6 +57,8 @@ interface WorkspaceState {
   openProject: (fs: FsProvider) => Promise<void>
   /** Fecha o projeto; com alterações não salvas pergunta antes. false = usuário cancelou. */
   closeProject: () => Promise<boolean>
+  /** Pergunta o que fazer com arquivos não salvos (salvar tudo / descartar). false = cancelou. */
+  resolveUnsaved: (title: string) => Promise<boolean>
   loadDir: (path: string) => Promise<void>
   toggleDir: (path: string) => Promise<void>
   collapseAll: () => void
@@ -111,20 +113,24 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       await get().loadDir('/')
     },
 
-    async closeProject() {
+    async resolveUnsaved(title) {
       const unsaved = Object.keys(get().dirty).filter((p) => get().dirty[p])
-      if (unsaved.length) {
-        const choice = await dialogs.choose({
-          title: t('confirm.unsavedProject'),
-          message: unsaved.map(basename).join(', '),
-          choices: [
-            { id: 'save', label: t('dialog.saveAll') },
-            { id: 'discard', label: t('dialog.discard'), danger: true },
-          ],
-        })
-        if (!choice) return false
-        if (choice === 'save') for (const path of unsaved) await editorBridge.save?.(path)
-      }
+      if (!unsaved.length) return true
+      const choice = await dialogs.choose({
+        title,
+        message: unsaved.map(basename).join(', '),
+        choices: [
+          { id: 'save', label: t('dialog.saveAll') },
+          { id: 'discard', label: t('dialog.discard'), danger: true },
+        ],
+      })
+      if (!choice) return false
+      if (choice === 'save') for (const path of unsaved) await editorBridge.save?.(path)
+      return true
+    },
+
+    async closeProject() {
+      if (!(await get().resolveUnsaved(t('confirm.unsavedProject')))) return false
       for (const tab of get().tabs) editorBridge.disposeModel?.(tab.path)
       set({ fs: null, tree: {}, expanded: {}, selected: null, tabs: [], active: null, dirty: {}, editing: null })
       return true

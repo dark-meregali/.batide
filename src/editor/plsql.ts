@@ -1,5 +1,6 @@
 import type * as Monaco from 'monaco-editor'
 import { formatPlsql } from './plsqlFormat'
+import { recordColumns } from './plsqlColumns'
 
 /** Suporte a PL/SQL (Oracle): destaque de sintaxe, snippets e formatação. */
 
@@ -153,10 +154,18 @@ export function registerPlsql(monaco: typeof Monaco, keywordCase: () => KeywordC
 
   const keywordSet = new Set([...keywords, ...types, ...builtins])
   monaco.languages.registerCompletionItemProvider('plsql', {
+    triggerCharacters: ['.'],
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position)
       const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn)
       const K = monaco.languages.CompletionItemKind
+      // "registro." → colunas do cursor do registro; outro "algo." não recebe palavras-chave.
+      const before = model.getLineContent(position.lineNumber).slice(0, word.startColumn - 1)
+      const qualifier = /([a-zA-Z_][\w$#]*)\.$/.exec(before)?.[1]
+      if (qualifier) {
+        const cols = recordColumns(model.getValue(), qualifier) ?? []
+        return { suggestions: cols.map((c) => ({ label: c, kind: K.Field, insertText: c, range })) }
+      }
       const kase = keywordCase()
       const cased = (w: string) => (kase === 'upper' ? w.toUpperCase() : w.toLowerCase())
       const words = (list: string[], kind: Monaco.languages.CompletionItemKind) =>

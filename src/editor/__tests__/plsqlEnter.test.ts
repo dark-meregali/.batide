@@ -59,9 +59,24 @@ describe('Enter no padrão PL/SQL da equipe', () => {
       'procedure prc_movimenta(p_id in number',
       '                       ,p_status out char) is',
     ].join('\n')
-    expect(enter(header, 1)).toBe([...header.split('\n'), '  --', '  |', '  --'].join('\n'))
+    expect(enter(header, 1)).toBe([...header.split('\n'), '  --', '  |', '  --', 'end prc_movimenta;'].join('\n'))
     expect(enter('declare', 0)).toBe('declare\n  --\n  |\n  --')
-    expect(enter('  function fnc_total return number is', 0)).toBe('  function fnc_total return number is\n    --\n    |\n    --')
+    expect(enter('  function fnc_total return number is', 0)).toBe('  function fnc_total return number is\n    --\n    |\n    --\n  end fnc_total;')
+    expect(enter('create or replace package body owner.pck_estoque is', 0)).toBe(
+      'create or replace package body owner.pck_estoque is\n  --\n  |\n  --\nend pck_estoque;',
+    )
+    expect(enter('PROCEDURE PRC_X IS', 0)).toBe('PROCEDURE PRC_X IS\n  --\n  |\n  --\nEND PRC_X;')
+  })
+
+  it('cabeçalho que já tem corpo (begin/end abaixo) não ganha outro end', () => {
+    expect(enter(['procedure p is', 'begin', '  null;', 'end p;'].join('\n'), 0)).toBe(
+      ['procedure p is', '  --', '  |', '  --', 'begin', '  null;', 'end p;'].join('\n'),
+    )
+  })
+
+  it('begin depois do cabeçalho fechado não duplica o end', () => {
+    const doc = ['procedure p is', '  --', '  v number;', '  --', '  begin', '  --', 'end p;']
+    expect(enter(doc.join('\n'), 4)).toBe(['procedure p is', '  --', '  v number;', '  --', 'begin', '  --', '  |', '  --', 'end p;'].join('\n'))
   })
 
   it('cursor is select … não é bloco (é declaração de cursor)', () => {
