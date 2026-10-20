@@ -25,7 +25,7 @@ self.MonacoEnvironment = {
   },
 }
 
-registerPlsql(monaco)
+registerPlsql(monaco, () => useSettings.getState().plsqlKeywordCase)
 
 // Nomes de função em TS/JS: substitui a fábrica de tokenizador do Monaco (registrada no import)
 // pela nossa, antes de qualquer arquivo abrir. Sem corrida com o carregamento sob demanda.

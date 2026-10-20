@@ -136,7 +136,7 @@ export async function newProject(page: Page, name: string) {
 /** Cria arquivos na raiz do projeto pela edição inline do explorador. */
 export async function createFiles(page: Page, ...paths: string[]) {
   for (const path of paths) {
-    await page.locator('.tree').click({ position: { x: 3, y: 3 } }) // limpa a seleção: cria na raiz
+    await page.locator('.file-tree').click({ position: { x: 3, y: 3 } }) // limpa a seleção: cria na raiz
     await page.getByRole('button', { name: 'Novo arquivo' }).first().click()
     await page.locator('.tree-edit input').fill(path)
     await page.keyboard.press('Enter')
@@ -153,9 +153,28 @@ export async function typeLines(page: Page, text: string) {
   await page.locator('.editor-host:not([hidden]) .monaco-editor .view-lines').click()
   const lines = text.split('\n')
   for (let i = 0; i < lines.length; i++) {
-    if (i > 0) await page.keyboard.press('Shift+Enter')
+    if (i > 0) {
+      await closeSuggest(page) // com a lista aberta, Shift+Enter aceitaria a sugestão
+      await page.keyboard.press('Shift+Enter')
+    }
     await page.keyboard.type(lines[i])
   }
+}
+
+/**
+ * Digita a linha e aperta Enter no editor (com o Enter do padrão PL/SQL). Antes, fecha a lista
+ * de sugestões: espera ela abrir (se for abrir) para o Escape não chegar antes dela.
+ */
+export async function typeAndEnter(page: Page, text: string) {
+  await page.keyboard.type(text)
+  await closeSuggest(page)
+  await page.keyboard.press('Enter')
+}
+
+async function closeSuggest(page: Page) {
+  await page.locator('.suggest-widget.visible').waitFor({ timeout: 700 }).catch(() => {})
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.suggest-widget.visible')).toHaveCount(0)
 }
 
 /** Digita no editor Monaco visível. */

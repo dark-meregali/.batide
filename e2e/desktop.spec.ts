@@ -25,7 +25,7 @@ test.describe('app desktop (Tauri)', () => {
     await expect.poll(async () => (await fakeState(page)).files['/README.md']).toBe('# Projeto editado')
 
     // Criar arquivo inline grava no disco.
-    await page.locator('.tree').click({ position: { x: 3, y: 3 } })
+    await page.locator('.file-tree').click({ position: { x: 3, y: 3 } })
     await page.locator('.sidebar-header').getByRole('button', { name: 'Novo arquivo' }).click()
     await page.locator('.tree-edit input').fill('db/novo.pks')
     await page.keyboard.press('Enter')

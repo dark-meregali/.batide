@@ -134,31 +134,47 @@ const snippets: [label: string, doc: string, body: string][] = [
   ['merge', 'merge into', 'merge into ${1:destino} d\nusing ${2:origem} o\n   on (d.${3:id} = o.${3:id})\n when matched then\n   update set d.${4:col} = o.${4:col}\n when not matched then\n   insert (${5:cols}) values (${0:valores});'],
 ]
 
+type KeywordCase = 'lower' | 'upper'
+
+/** Aplica a caixa escolhida às palavras-chave de um trecho (fora de textos entre aspas). */
+export function applyKeywordCase(text: string, keywords: Set<string>, kase: KeywordCase) {
+  return text.replace(/'(?:[^']|'')*'|[a-zA-Z_][\w#]*/g, (m) => {
+    if (m.startsWith("'") || !keywords.has(m.toUpperCase())) return m
+    return kase === 'upper' ? m.toUpperCase() : m.toLowerCase()
+  })
+}
+
 export const PLSQL_EXTENSIONS = ['sql', 'pls', 'plsql', 'pks', 'pkb', 'pck', 'prc', 'fnc', 'trg', 'tps', 'tpb', 'vw', 'ddl', 'dml']
 
-export function registerPlsql(monaco: typeof Monaco) {
+export function registerPlsql(monaco: typeof Monaco, keywordCase: () => KeywordCase = () => 'lower') {
   monaco.languages.register({ id: 'plsql', extensions: PLSQL_EXTENSIONS.map((e) => '.' + e), aliases: ['PL/SQL', 'plsql'] })
   monaco.languages.setMonarchTokensProvider('plsql', language)
   monaco.languages.setLanguageConfiguration('plsql', configuration)
 
+  const keywordSet = new Set([...keywords, ...types, ...builtins])
   monaco.languages.registerCompletionItemProvider('plsql', {
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position)
       const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn)
       const K = monaco.languages.CompletionItemKind
+      const kase = keywordCase()
+      const cased = (w: string) => (kase === 'upper' ? w.toUpperCase() : w.toLowerCase())
       const words = (list: string[], kind: Monaco.languages.CompletionItemKind) =>
-        list.map((w) => ({ label: w.toLowerCase(), kind, insertText: w.toLowerCase(), range }))
+        list.map((w) => ({ label: cased(w), kind, insertText: cased(w), range }))
       return {
         suggestions: [
-          ...snippets.map(([label, doc, body]) => ({
-            label,
-            kind: K.Snippet,
-            detail: doc,
-            documentation: body.replace(/\$\{\d+:?([^}]*)\}/g, '$1'),
-            insertText: body,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            range,
-          })),
+          ...snippets.map(([label, doc, raw]) => {
+            const body = applyKeywordCase(raw, keywordSet, kase)
+            return {
+              label,
+              kind: K.Snippet,
+              detail: doc,
+              documentation: body.replace(/\$\{\d+:?([^}]*)\}/g, '$1'),
+              insertText: body,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range,
+            }
+          }),
           ...words(keywords, K.Keyword),
           ...words(types, K.TypeParameter),
           ...words(builtins, K.Function),
@@ -167,11 +183,10 @@ export function registerPlsql(monaco: typeof Monaco) {
     },
   })
 
-  const keywordSet = new Set([...keywords, ...types, ...builtins])
   monaco.languages.registerDocumentFormattingEditProvider('plsql', {
     provideDocumentFormattingEdits(model, options) {
       const indent = options.insertSpaces ? ' '.repeat(options.tabSize) : '\t'
-      const text = formatPlsql(model.getValue(), { indent, keywords: keywordSet, keywordCase: 'lower' })
+      const text = formatPlsql(model.getValue(), { indent, keywords: keywordSet, keywordCase: keywordCase() })
       return [{ range: model.getFullModelRange(), text }]
     },
   })
