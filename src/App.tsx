@@ -48,6 +48,14 @@ export default function App() {
   }, [lang])
 
   useEffect(() => {
+    const mq = matchMedia('(max-width: 640px)')
+    const update = () => useWorkspace.setState({ narrow: mq.matches })
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
       const ws = useWorkspace.getState()
@@ -163,6 +171,8 @@ function Sidebar({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
+    <>
+    <div className="sidebar-scrim" onClick={() => useWorkspace.getState().toggleSidebar()} />
     <aside className="sidebar" style={{ width }}>
       {children}
       <div
@@ -173,6 +183,7 @@ function Sidebar({ children }: { children: React.ReactNode }) {
         }}
       />
     </aside>
+    </>
   )
 }
 
@@ -264,7 +275,8 @@ function StatusBar() {
   const language = useWorkspace((s) => s.activeLanguage)
   const isRepo = useGit((s) => s.isRepo)
   const branch = useGit((s) => s.branch)
-  const busy = useGit((s) => !!s.busy)
+  const busy = useGit((s) => s.busy)
+  const progress = useGit((s) => s.progress)
   const { set, lang } = useSettings()
   const [offlineReady, setOfflineReady] = useState(false)
 
@@ -282,8 +294,13 @@ function StatusBar() {
         <button className="status-item status-btn" onClick={() => useWorkspace.getState().setDialog('branch')}>
           <IconBranch size={13} />
           {branch ?? 'HEAD'}
-          {busy && ' ⟳'}
         </button>
+      )}
+      {busy && (
+        <span className="status-item" role="status">
+          <span className="spinner" aria-hidden />
+          {progress ?? t(`git.busy.${busy}` as Parameters<typeof t>[0])}
+        </span>
       )}
       <div className="spacer" />
       {offlineReady && (
@@ -297,7 +314,12 @@ function StatusBar() {
           <span className="status-item">{language}</span>
         </>
       )}
-      <button className="status-item status-btn" onClick={() => set({ lang: lang === 'pt' ? 'en' : 'pt' })}>
+      <button
+        className="status-item status-btn"
+        aria-label={t('status.language', { lang: lang === 'pt' ? 'Português' : 'English' })}
+        title={t('status.language', { lang: lang === 'pt' ? 'Português' : 'English' })}
+        onClick={() => set({ lang: lang === 'pt' ? 'en' : 'pt' })}
+      >
         {lang === 'pt' ? 'PT' : 'EN'}
       </button>
     </footer>

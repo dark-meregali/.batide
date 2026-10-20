@@ -42,6 +42,8 @@ interface WorkspaceState {
   activeLanguage: string
   sidebarVisible: boolean
   sidebarView: SidebarView
+  /** Tela estreita (celular): a barra lateral sobrepõe o editor e sai da frente ao abrir arquivo. */
+  narrow: boolean
   toast: string | null
   dialog: Dialog
   editing: Editing
@@ -89,6 +91,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     activeLanguage: '',
     sidebarVisible: true,
     sidebarView: 'explorer',
+    narrow: false,
     toast: null,
     dialog: null,
     editing: null,
@@ -103,7 +106,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       const unsaved = Object.keys(get().dirty).filter((p) => get().dirty[p])
       if (unsaved.length) {
         const choice = await dialogs.choose({
-          title: unsaved.length === 1 ? t('confirm.unsavedProjectOne') : t('confirm.unsavedProject', { n: unsaved.length }),
+          title: t('confirm.unsavedProject'),
           message: unsaved.map(basename).join(', '),
           choices: [
             { id: 'save', label: t('dialog.saveAll') },
@@ -157,7 +160,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     openFile(path) {
       const { tabs } = get()
       if (!tabs.some((t) => t.path === path)) set({ tabs: [...tabs, { path, name: basename(path) }] })
-      set({ active: path, selected: path })
+      set({ active: path, selected: path, ...(get().narrow && { sidebarVisible: false }) })
     },
 
     openDiff(path) {
