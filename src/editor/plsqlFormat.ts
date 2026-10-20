@@ -1,5 +1,5 @@
 /**
- * Formatador de PL/SQL: reindenta blocos e põe palavras reservadas em maiúsculas,
+ * Formatador de PL/SQL: reindenta blocos e padroniza a caixa das palavras reservadas (minúsculas, padrão da equipe),
  * mantendo as quebras de linha do autor (formatadores de SQL genéricos desmontam
  * procedures e packages).
  */
@@ -13,7 +13,10 @@ interface Tok {
 
 export interface FormatOptions {
   indent: string
-  upperWords: Set<string>
+  /** Palavras reservadas, tipos e funções nativas (em maiúsculas). */
+  keywords: Set<string>
+  /** Padrão da equipe: minúsculas. */
+  keywordCase?: 'lower' | 'upper'
 }
 
 // Palavras que iniciam a declaração de uma unidade cujo IS/AS abre uma seção de declarações.
@@ -125,7 +128,10 @@ export function formatPlsql(source: string, opts: FormatOptions): string {
     inString = res.inString
 
     const text = toks
-      .map((t) => (t.kind === 'word' && opts.upperWords.has(t.text.toUpperCase()) ? t.text.toUpperCase() : t.text))
+      .map((t) => {
+        if (t.kind !== 'word' || !opts.keywords.has(t.text.toUpperCase())) return t.text
+        return opts.keywordCase === 'upper' ? t.text.toUpperCase() : t.text.toLowerCase()
+      })
       .join('')
       .trimEnd()
     out.push(opts.indent.repeat(level) + text)

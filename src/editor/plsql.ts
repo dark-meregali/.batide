@@ -112,23 +112,26 @@ const configuration: Monaco.languages.LanguageConfiguration = {
   },
 }
 
+// Snippets no padrão da equipe: minúsculas, "--" abrindo/fechando blocos e entre comandos,
+// parâmetros com a vírgula na frente.
 const snippets: [label: string, doc: string, body: string][] = [
-  ['proc', 'CREATE OR REPLACE PROCEDURE', 'CREATE OR REPLACE PROCEDURE ${1:nome} (\n  ${2:p_param} IN ${3:VARCHAR2}\n) IS\nBEGIN\n  ${0:NULL;}\nEND ${1:nome};\n/'],
-  ['func', 'CREATE OR REPLACE FUNCTION', 'CREATE OR REPLACE FUNCTION ${1:nome} (\n  ${2:p_param} IN ${3:VARCHAR2}\n) RETURN ${4:NUMBER} IS\n  v_result ${4:NUMBER};\nBEGIN\n  ${0}\n  RETURN v_result;\nEND ${1:nome};\n/'],
-  ['pks', 'CREATE OR REPLACE PACKAGE (spec)', 'CREATE OR REPLACE PACKAGE ${1:pkg_nome} AS\n  ${0}\nEND ${1:pkg_nome};\n/'],
-  ['pkb', 'CREATE OR REPLACE PACKAGE BODY', 'CREATE OR REPLACE PACKAGE BODY ${1:pkg_nome} AS\n  ${0}\nEND ${1:pkg_nome};\n/'],
-  ['trg', 'CREATE OR REPLACE TRIGGER', 'CREATE OR REPLACE TRIGGER ${1:trg_nome}\n  ${2|BEFORE,AFTER|} ${3|INSERT,UPDATE,DELETE|} ON ${4:tabela}\n  FOR EACH ROW\nBEGIN\n  ${0}\nEND;\n/'],
-  ['block', 'Bloco anônimo DECLARE/BEGIN/END', 'DECLARE\n  ${1}\nBEGIN\n  ${0}\nEND;\n/'],
-  ['exc', 'EXCEPTION WHEN', 'EXCEPTION\n  WHEN ${1:NO_DATA_FOUND} THEN\n    ${2:NULL;}\n  WHEN OTHERS THEN\n    ${0:RAISE;}'],
-  ['forc', 'FOR rec IN (cursor) LOOP', 'FOR ${1:r} IN (\n  SELECT ${2:*}\n    FROM ${3:tabela}\n) LOOP\n  ${0}\nEND LOOP;'],
-  ['fori', 'FOR i IN 1..n LOOP', 'FOR ${1:i} IN ${2:1}..${3:n} LOOP\n  ${0}\nEND LOOP;'],
-  ['if', 'IF / THEN / END IF', 'IF ${1:condicao} THEN\n  ${0}\nEND IF;'],
-  ['case', 'CASE WHEN', 'CASE\n  WHEN ${1:condicao} THEN ${2:valor}\n  ELSE ${0:valor}\nEND'],
-  ['cur', 'CURSOR declarado', 'CURSOR ${1:c_nome} IS\n  SELECT ${2:*}\n    FROM ${3:tabela};'],
-  ['bulk', 'BULK COLLECT + FORALL', 'SELECT ${1:*}\n  BULK COLLECT INTO ${2:v_tab}\n  FROM ${3:tabela};\n\nFORALL i IN 1..${2:v_tab}.COUNT\n  ${0}'],
-  ['dbms', 'DBMS_OUTPUT.PUT_LINE', "DBMS_OUTPUT.PUT_LINE(${0:'texto'});"],
-  ['rae', 'RAISE_APPLICATION_ERROR', "RAISE_APPLICATION_ERROR(-20${1:001}, '${0:mensagem}');"],
-  ['merge', 'MERGE INTO', 'MERGE INTO ${1:destino} d\nUSING ${2:origem} o\n   ON (d.${3:id} = o.${3:id})\n WHEN MATCHED THEN\n   UPDATE SET d.${4:col} = o.${4:col}\n WHEN NOT MATCHED THEN\n   INSERT (${5:cols}) VALUES (${0:valores});'],
+  ['proc', 'procedure', 'procedure ${1:prc_nome}(${2:p_param} in ${3:number}\n${1/./ /g}          ,p_mensagem out varchar2\n${1/./ /g}          ,p_status   out char) is\n  --\nbegin\n  --\n  ${0:null;}\n  --\n  p_status := \'F\';\n  --\nexception\n  when others then\n    --\n    p_status := \'E\';\n    p_mensagem := regexp_replace(sqlerrm, \'^ORA-[0-9]+: \', null);\n    --\nend ${1:prc_nome};'],
+  ['func', 'function', 'function ${1:fnc_nome}(${2:p_param} in ${3:number}) return ${4:number} is\n  --\n  v_retorno ${4:number};\n  --\nbegin\n  --\n  ${0}\n  --\n  return v_retorno;\n  --\nend ${1:fnc_nome};'],
+  ['pks', 'create or replace package (spec)', 'create or replace package ${1:pck_nome} is\n  --\n  ${0}\n  --\nend ${1:pck_nome};\n/'],
+  ['pkb', 'create or replace package body', 'create or replace package body ${1:pck_nome} is\n  --\n  ${0}\n  --\nend ${1:pck_nome};\n/'],
+  ['trg', 'create or replace trigger', 'create or replace trigger ${1:trg_nome}\n  ${2|before,after|} ${3|insert,update,delete|} on ${4:tabela}\n  for each row\nbegin\n  --\n  ${0}\n  --\nend;\n/'],
+  ['block', 'bloco anônimo declare/begin/end', 'declare\n  --\n  ${1}\n  --\nbegin\n  --\n  ${0}\n  --\nend;\n/'],
+  ['exc', 'exception when others', 'exception\n  when ${1:others} then\n    --\n    ${0:raise;}\n    --'],
+  ['forc', 'for r in cursor loop', 'for ${1:r_item} in ${2:c_itens} loop\n  --\n  ${0}\n  --\nend loop;'],
+  ['fori', 'for i in 1..n loop', 'for ${1:i} in ${2:1}..${3:n} loop\n  --\n  ${0}\n  --\nend loop;'],
+  ['if', 'if / then / end if', 'if (${1:condicao}) then\n  --\n  ${0}\n  --\nend if;'],
+  ['case', 'case when', 'case\n  when ${1:condicao} then ${2:valor}\n  else ${0:valor}\nend'],
+  ['cur', 'cursor declarado', 'cursor ${1:c_nome} is\n  select ${2:t.coluna}\n    from ${3:tabela} t\n   where ${0:1 = 1};'],
+  ['ofc', 'open / fetch / close', 'open  ${1:c_nome};\nfetch ${1:c_nome} into ${2:r_nome};\nclose ${1:c_nome};'],
+  ['bulk', 'bulk collect + forall', 'select ${1:*}\n  bulk collect into ${2:v_tab}\n  from ${3:tabela};\n--\nforall i in 1..${2:v_tab}.count\n  ${0}'],
+  ['dbms', 'dbms_output.put_line', "dbms_output.put_line(${0:'texto'});"],
+  ['rae', 'raise_application_error', "raise_application_error(-20${1:001}, '${0:mensagem}');"],
+  ['merge', 'merge into', 'merge into ${1:destino} d\nusing ${2:origem} o\n   on (d.${3:id} = o.${3:id})\n when matched then\n   update set d.${4:col} = o.${4:col}\n when not matched then\n   insert (${5:cols}) values (${0:valores});'],
 ]
 
 export const PLSQL_EXTENSIONS = ['sql', 'pls', 'plsql', 'pks', 'pkb', 'pck', 'prc', 'fnc', 'trg', 'tps', 'tpb', 'vw', 'ddl', 'dml']
@@ -144,7 +147,7 @@ export function registerPlsql(monaco: typeof Monaco) {
       const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn)
       const K = monaco.languages.CompletionItemKind
       const words = (list: string[], kind: Monaco.languages.CompletionItemKind) =>
-        list.map((w) => ({ label: w, kind, insertText: w, range }))
+        list.map((w) => ({ label: w.toLowerCase(), kind, insertText: w.toLowerCase(), range }))
       return {
         suggestions: [
           ...snippets.map(([label, doc, body]) => ({
@@ -164,11 +167,11 @@ export function registerPlsql(monaco: typeof Monaco) {
     },
   })
 
-  const upperWords = new Set([...keywords, ...types, ...builtins])
+  const keywordSet = new Set([...keywords, ...types, ...builtins])
   monaco.languages.registerDocumentFormattingEditProvider('plsql', {
     provideDocumentFormattingEdits(model, options) {
       const indent = options.insertSpaces ? ' '.repeat(options.tabSize) : '\t'
-      const text = formatPlsql(model.getValue(), { indent, upperWords })
+      const text = formatPlsql(model.getValue(), { indent, keywords: keywordSet, keywordCase: 'lower' })
       return [{ range: model.getFullModelRange(), text }]
     },
   })

@@ -14,8 +14,10 @@ IDE leve e rápida, no estilo do VS Code, que roda **no navegador** e **no deskt
 ## Recursos
 
 - **Editor Monaco** (o mesmo do VS Code), com IntelliSense para JS/TS/HTML/CSS/JSON.
-- **PL/SQL**: destaque de sintaxe, autocompletar, snippets (`proc`, `func`, `pkb`, `trg`, `forc`, `exc`, `merge`…)
-  e formatador próprio (`Shift+Alt+F`) que reindenta blocos e põe palavras-chave em maiúsculas.
+- **PL/SQL no padrão da equipe**: minúsculas, 2 espaços, `--` abrindo/fechando blocos e entre comandos.
+  O **Enter** monta o bloco (`if (…) then` → `--`, cursor, `--`, `end if;`), separa comandos com `--` e
+  reposiciona `begin`/`exception`; **Shift+Enter** é a quebra comum (para agrupar `open`/`fetch`/`close`).
+  Snippets (`proc`, `func`, `pkb`, `trg`, `if`, `forc`, `ofc`, `exc`, `merge`…) e formatador (`Shift+Alt+F`) no mesmo padrão.
 - **Projetos no navegador**, salvos no IndexedDB, ou **pastas do computador** (Chrome/Edge).
 - **Funciona offline**: instale como app pelo navegador (PWA). Nada é carregado de CDN.
 - Interface em **português e inglês**.

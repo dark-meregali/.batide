@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { monaco, getModel, saveFile, saveViewState, languageLabel } from '../editor/monaco'
 import { DIFF_PREFIX, editorBridge, useWorkspace } from '../store/workspace'
+import { plsqlEnter } from '../editor/plsqlEnter'
 import { useSettings } from '../store/settings'
 
 /** Carregado sob demanda (React.lazy): o Monaco só baixa quando o primeiro arquivo abre. */
@@ -47,6 +48,47 @@ export default function Editor() {
       const path = useWorkspace.getState().active
       if (path) useWorkspace.getState().closeTab(path)
     })
+    // PL/SQL: Enter no padrão da equipe ("--" nos blocos e entre comandos). Shift+Enter fica comum.
+    editor.addCommand(
+      monaco.KeyCode.Enter,
+      () => {
+        const model = editor.getModel()
+        const pos = editor.getPosition()
+        const result =
+          model && pos
+            ? plsqlEnter({
+                lines: model.getLinesContent(),
+                line: pos.lineNumber - 1,
+                column: pos.column - 1,
+                tabSize: model.getOptions().tabSize,
+              })
+            : null
+        if (!model || !pos || !result) {
+          editor.trigger('keyboard', 'type', { text: '\n' })
+          return
+        }
+        const ln = pos.lineNumber
+        const after = result.after ?? 0
+        const edits: monaco.editor.IIdentifiedSingleEditOperation[] = []
+        if (result.replaceLine !== undefined) {
+          edits.push({ range: new monaco.Range(ln, 1, ln, model.getLineMaxColumn(ln)), text: result.replaceLine })
+        } else {
+          // Tira espaços sobrando depois do cursor (o cursor está no fim do código da linha).
+          edits.push({ range: new monaco.Range(ln, pos.column, ln, model.getLineMaxColumn(ln)), text: '' })
+        }
+        const anchor = ln + after
+        const end = model.getLineMaxColumn(anchor)
+        edits.push({ range: new monaco.Range(anchor, end, anchor, end), text: '\n' + result.insert.join('\n') })
+        if (result.removeNext) {
+          // Apaga a linha seguinte inteira (do fim da atual até o fim dela).
+          edits.push({ range: new monaco.Range(ln + 1, 1, ln + 2, 1), text: '' })
+        }
+        editor.executeEdits('plsql-enter', edits)
+        editor.setPosition({ lineNumber: anchor + 1 + result.cursorLine, column: result.cursorColumn + 1 })
+        editor.pushUndoStop()
+      },
+      "editorTextFocus && editorLangId == 'plsql' && !editorReadonly && !editorHasMultipleSelections && !suggestWidgetVisible && !inSnippetMode",
+    )
     // No Linux o padrão do Monaco é Ctrl+Shift+I; usamos o mesmo atalho em todo lugar.
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
       editor.getAction('editor.action.formatDocument')?.run()
