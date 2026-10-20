@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { monaco, getModel, saveFile, saveViewState, languageLabel } from '../editor/monaco'
+import { monaco, getModel, saveFile, saveViewState, languageLabel, editorTheme } from '../editor/monaco'
 import { DIFF_PREFIX, editorBridge, useWorkspace } from '../store/workspace'
 import { plsqlEnter } from '../editor/plsqlEnter'
 import { useSettings } from '../store/settings'
@@ -17,7 +17,7 @@ export default function Editor() {
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
     const editor = monaco.editor.create(host.current!, {
       model: null,
-      theme: 'batide-dark',
+      theme: editorTheme(),
       automaticLayout: true,
       fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace",
       fontLigatures: true,

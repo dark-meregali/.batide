@@ -25,6 +25,29 @@
   color-scheme: dark;
 }
 
+/* Tema padrão "Escuro moderno": cinzas e azul do VS Code (Dark Modern). O Carmesim fica como opção. */
+:root[data-theme='modern'] {
+  --bg: #1f1f1f;
+  --bg-elev: #181818;
+  --bg-panel: #252526;
+  --bg-hover: #2a2d2e;
+  --bg-active: #37373d;
+  --border: #2b2b2b;
+  --border-strong: #3c3c3c;
+  --text: #cccccc;
+  --text-dim: #9d9d9d;
+  --text-faint: #8f8f8f;
+  --accent: #3794ff;
+  /* Fundo de botão com texto branco (4,6:1). */
+  --accent-strong: #0078d4;
+  --accent-2: #4fc1ff;
+  --danger: #f14c4c;
+  --git-modified: #e2c08d;
+  --git-added: #81b88b;
+  --git-untracked: #73c991;
+  --git-deleted: #f14c4c;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root { height: 100%; margin: 0; }

@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Lang } from '../i18n'
 
+export type ThemeName = 'modern' | 'carmesim'
+
 export interface Settings {
   lang: Lang
   fontSize: number
@@ -11,6 +13,8 @@ export interface Settings {
   formatOnSave: boolean
   /** Caixa das palavras-chave PL/SQL nas sugestões, snippets e formatador. */
   plsqlKeywordCase: 'lower' | 'upper'
+  /** Cores da interface e do editor. */
+  theme: ThemeName
   autoSave: boolean
   sidebarWidth: number
   /** URL do Cloudflare Worker (login OAuth + proxy do git). */
@@ -32,6 +36,7 @@ export const useSettings = create<Settings>()(
       minimap: false,
       formatOnSave: false,
       plsqlKeywordCase: 'lower',
+      theme: 'modern',
       autoSave: false,
       sidebarWidth: 260,
       proxyUrl: '',

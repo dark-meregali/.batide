@@ -8,7 +8,7 @@ test('cria projeto no navegador, edita PL/SQL, formata e salva', async ({ page }
   await typeLines(page, 'begin\nnull;\nend;')
   await expect(page.locator('.tab-close.dirty')).toHaveCount(1)
   await page.keyboard.press('Shift+Alt+F')
-  await expect.poll(() => editorText(page)).toBe('begin\n  null;\nend;\n')
+  await expect.poll(() => editorText(page)).toBe('begin\n  --\n  null;\n  --\nend;\n')
   await page.keyboard.press('Control+s')
   await expect(page.locator('.tab-close.dirty')).toHaveCount(0)
   await expect(page.locator('.status-bar')).toContainText('PL/SQL')
@@ -17,7 +17,7 @@ test('cria projeto no navegador, edita PL/SQL, formata e salva', async ({ page }
   await page.reload()
   await page.getByText('meu-projeto').click()
   await page.getByText('pkg_vendas.pkb').click()
-  await expect.poll(() => editorText(page)).toBe('begin\n  null;\nend;\n')
+  await expect.poll(() => editorText(page)).toBe('begin\n  --\n  null;\n  --\nend;\n')
 })
 
 test('troca o idioma da interface', async ({ page }) => {

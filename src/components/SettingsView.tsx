@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSettings } from '../store/settings'
+import { useSettings, type ThemeName } from '../store/settings'
 import { useT, type Lang } from '../i18n'
 import { DEFAULT_PROXY_URL, loginWithToken, startLogin, useAuth } from '../github/auth'
 import { useWorkspace } from '../store/workspace'
@@ -27,6 +27,13 @@ export function SettingsView() {
           <select value={s.lang} onChange={(e) => s.set({ lang: e.target.value as Lang })}>
             <option value="pt">Português</option>
             <option value="en">English</option>
+          </select>
+        </label>
+        <label className="setting-row">
+          <span>{t('settings.theme')}</span>
+          <select value={s.theme} onChange={(e) => s.set({ theme: e.target.value as ThemeName })}>
+            <option value="modern">{t('settings.theme.modern')}</option>
+            <option value="carmesim">{t('settings.theme.carmesim')}</option>
           </select>
         </label>
         <label className="setting-row">

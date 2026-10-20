@@ -1,6 +1,6 @@
 import type { editor } from 'monaco-editor'
 
-/** Tema do editor, costurado à interface: fundo quase preto, sintaxe em tons de vermelho e âmbar. */
+/** Tema "Carmesim": fundo quase preto, sintaxe em tons de vermelho e âmbar. */
 export const batideDark: editor.IStandaloneThemeData = {
   base: 'vs-dark',
   inherit: true,
@@ -79,5 +79,79 @@ export const batideDark: editor.IStandaloneThemeData = {
     'keybindingLabel.bottomBorder': '#26252a',
     'diffEditor.insertedTextBackground': '#8fd3a81f',
     'diffEditor.removedTextBackground': '#ff6b6b26',
+  },
+}
+
+/**
+ * Tema padrão "Escuro moderno": as cores de sintaxe do VS Code (Dark+) sobre o fundo do
+ * Dark Modern. Nomes de função continuam em itálico (fonte cursiva).
+ */
+export const batideModern: editor.IStandaloneThemeData = {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [
+    { token: '', foreground: 'cccccc' },
+    { token: 'identifier', foreground: '9cdcfe' },
+    { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
+    { token: 'keyword', foreground: '569cd6' },
+    { token: 'type', foreground: '4ec9b0' },
+    { token: 'type.identifier', foreground: '4ec9b0' },
+    { token: 'predefined', foreground: 'dcdcaa' },
+    { token: 'function', foreground: 'dcdcaa', fontStyle: 'italic' },
+    { token: 'string', foreground: 'ce9178' },
+    { token: 'string.escape', foreground: 'd7ba7d' },
+    { token: 'regexp', foreground: 'd16969' },
+    { token: 'number', foreground: 'b5cea8' },
+    { token: 'variable', foreground: '9cdcfe' },
+    { token: 'operator', foreground: 'd4d4d4' },
+    { token: 'delimiter', foreground: 'd4d4d4' },
+    { token: 'tag', foreground: '569cd6' },
+    { token: 'attribute.name', foreground: '9cdcfe' },
+    { token: 'attribute.value', foreground: 'ce9178' },
+    { token: 'identifier.quote', foreground: 'ce9178' },
+  ],
+  colors: {
+    'editor.background': '#1f1f1f',
+    'editor.foreground': '#cccccc',
+    'editorLineNumber.foreground': '#858585',
+    'editorLineNumber.activeForeground': '#cccccc',
+    'editor.lineHighlightBackground': '#ffffff0a',
+    'editor.lineHighlightBorder': '#00000000',
+    'editor.selectionBackground': '#264f78',
+    'editor.inactiveSelectionBackground': '#3a3d41',
+    'editorCursor.foreground': '#aeafad',
+    'editorIndentGuide.background1': '#404040',
+    'editorIndentGuide.activeBackground1': '#707070',
+    'editorWhitespace.foreground': '#3b3b3b',
+    'editorWidget.background': '#202020',
+    'editorWidget.border': '#454545',
+    'editorSuggestWidget.background': '#202020',
+    'editorSuggestWidget.border': '#454545',
+    'editorSuggestWidget.selectedBackground': '#04395e',
+    'editorHoverWidget.background': '#202020',
+    'editorHoverWidget.border': '#454545',
+    'input.background': '#313131',
+    'input.border': '#3c3c3c',
+    'focusBorder': '#0078d4',
+    'editorGutter.background': '#1f1f1f',
+    'minimap.background': '#1f1f1f',
+    // Colchetes coloridos como no VS Code: dourado, orquídea e azul.
+    'editorBracketHighlight.foreground1': '#ffd700',
+    'editorBracketHighlight.foreground2': '#da70d6',
+    'editorBracketHighlight.foreground3': '#179fff',
+    'editorBracketHighlight.unexpectedBracket.foreground': '#ff1212cc',
+    'quickInput.background': '#202020',
+    'quickInput.foreground': '#cccccc',
+    'quickInputList.focusBackground': '#04395e',
+    'quickInputList.focusForeground': '#ffffff',
+    'list.activeSelectionBackground': '#04395e',
+    'list.activeSelectionForeground': '#ffffff',
+    'list.focusBackground': '#04395e',
+    'list.hoverBackground': '#2a2d2e',
+    'list.highlightForeground': '#2aaaff',
+    'pickerGroup.foreground': '#9d9d9d',
+    'pickerGroup.border': '#3c3c3c',
+    'diffEditor.insertedTextBackground': '#9ccc2c33',
+    'diffEditor.removedTextBackground': '#ff000033',
   },
 }

@@ -6,7 +6,7 @@ import CssWorker from 'monaco-editor/language/css/css.worker?worker'
 import HtmlWorker from 'monaco-editor/language/html/html.worker?worker'
 import { PLSQL_EXTENSIONS, registerPlsql } from './plsql'
 import { withFunctionTokens } from './functionTokens'
-import { batideDark } from './theme'
+import { batideDark, batideModern } from './theme'
 // Fonte cursiva dos tokens em itálico (nomes de função, comentários). Mesma largura da JetBrains Mono.
 import '@fontsource/victor-mono/500-italic.css'
 import { DIFF_PREFIX, editorBridge, useWorkspace } from '../store/workspace'
@@ -55,6 +55,14 @@ for (const d of [tsDefaults, jsDefaults]) {
 }
 
 monaco.editor.defineTheme('batide-dark', batideDark)
+monaco.editor.defineTheme('batide-modern', batideModern)
+
+/** Nome do tema do Monaco para o tema escolhido nas configurações. */
+export const editorTheme = () => (useSettings.getState().theme === 'carmesim' ? 'batide-dark' : 'batide-modern')
+let currentTheme = editorTheme()
+useSettings.subscribe(() => {
+  if (editorTheme() !== currentTheme) monaco.editor.setTheme((currentTheme = editorTheme()))
+})
 
 const extLanguages: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', mts: 'typescript', cts: 'typescript',

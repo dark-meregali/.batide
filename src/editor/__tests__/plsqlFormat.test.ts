@@ -213,6 +213,7 @@ end prc_baixa_pedido;
 
   it('código já no padrão sai idêntico (não desmonta parâmetros, select e insert alinhados)', () => {
     expect(lower(canon)).toBe(canon)
+    expect(formatPlsql(canon, { indent: '  ', keywords, keywordCase: 'lower', separators: true })).toBe(canon)
   })
 
   it('reindenta blocos desalinhados e leva as linhas de continuação junto, sem perder o alinhamento', () => {
@@ -221,5 +222,136 @@ end prc_baixa_pedido;
     const shifted = lines.map((l, i) => (i >= 5 && i < 12 ? '      ' + l : i >= 49 && i < 58 ? l.slice(4) : l)).join('\n')
     expect(shifted).not.toBe(canon)
     expect(lower(shifted)).toBe(canon)
+  })
+})
+
+describe('formatPlsql: separadores "--" do padrão da equipe', () => {
+  const team = (s: string) => formatPlsql(s, { indent: '  ', keywords, keywordCase: 'lower', separators: true })
+
+  it('põe "--" entre o fim de um bloco e o comando seguinte, e antes do fechamento', () => {
+    const input = ['begin', '  --', '  if (a) then', '    --', '    x;', '    --', '  end if;', '  htp.p(1);', '  htp.p(2);', 'end;'].join('\n')
+    expect(team(input)).toBe(
+      ['begin', '  --', '  if (a) then', '    --', '    x;', '    --', '  end if;', '  --', '  htp.p(1);', '  htp.p(2);', '  --', 'end;', ''].join('\n'),
+    )
+  })
+
+  it('monta o padrão completo em código sem nenhum "--", mantendo agrupados os comandos simples', () => {
+    const input = `procedure p is
+v number;
+begin
+open c;
+fetch c into r;
+close c;
+if (v is null) then
+x := 1;
+elsif (v = 1) then
+x := 2;
+else
+x := 3;
+end if;
+for r in c loop
+null;
+end loop;
+exception
+when others then
+raise;
+end p;`
+    expect(team(input)).toBe(`procedure p is
+  --
+  v number;
+  --
+begin
+  --
+  open c;
+  fetch c into r;
+  close c;
+  --
+  if (v is null) then
+    --
+    x := 1;
+    --
+  elsif (v = 1) then
+    --
+    x := 2;
+    --
+  else
+    --
+    x := 3;
+    --
+  end if;
+  --
+  for r in c loop
+    --
+    null;
+    --
+  end loop;
+  --
+exception
+  when others then
+    --
+    raise;
+    --
+end p;
+`)
+  })
+
+  it('comentário já conta como separador; case dentro de expressão não ganha "--"', () => {
+    const input = ['begin', '  -- abre', '  if (a) then', '    -- faz x', '    x := case', '           when a then 1', '           else 2', '         end;', '    -- fim', '  end if;', 'end;'].join('\n')
+    expect(team(input)).toBe([...input.split('\n').slice(0, 10), '  --', 'end;', ''].join('\n'))
+  })
+
+  it('sem a opção, não acrescenta nada', () => {
+    expect(fmt('begin\nif a then\nx;\nend if;\ny;\nend;')).not.toContain('--')
+  })
+})
+
+describe('formatPlsql: alinhamento da lista de parâmetros', () => {
+  const team = (s: string) => formatPlsql(s, { indent: '  ', keywords, keywordCase: 'lower', separators: true })
+
+  it('vírgula embaixo do "(" e modo/tipo na mesma coluna, inclusive na primeira linha', () => {
+    const input = `procedure prc_x(p_id_conta              in number
+                  ,p_id_empresas           in varchar2
+                  ,p_tipo  in char := 'V'
+                  ,p_somente in char default '0') is
+begin
+  --
+  null;
+  --
+end;`
+    expect(team(input)).toBe(`procedure prc_x(p_id_conta    in number
+               ,p_id_empresas in varchar2
+               ,p_tipo        in char := 'V'
+               ,p_somente     in char default '0') is
+begin
+  --
+  null;
+  --
+end;
+`)
+  })
+
+  it('também em cursor e function (com return na última linha)', () => {
+    const input = `declare
+  --
+  cursor c_a(pc_filtro varchar2
+     ,pc_considerar_os_painel char) is
+    select 1 from dual;
+  --
+  function fnc_a(p_a in number
+  ,p_bb in number) return number is
+  begin
+    --
+    return 1;
+    --
+  end fnc_a;
+  --
+begin
+  --
+  null;
+  --
+end;`
+    const out = team(input)
+    expect(out).toContain('  cursor c_a(pc_filtro               varchar2\n            ,pc_considerar_os_painel char) is\n')
+    expect(out).toContain('  function fnc_a(p_a  in number\n                ,p_bb in number) return number is\n')
   })
 })

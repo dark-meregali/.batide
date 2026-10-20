@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { monaco, getDiffModels, saveFile } from '../editor/monaco'
+import { monaco, getDiffModels, saveFile, editorTheme } from '../editor/monaco'
 import { DIFF_PREFIX, useWorkspace } from '../store/workspace'
 import { useSettings } from '../store/settings'
 
@@ -11,7 +11,7 @@ export default function DiffView({ tabPath }: { tabPath: string }) {
 
   useEffect(() => {
     const editor = monaco.editor.createDiffEditor(host.current!, {
-      theme: 'batide-dark',
+      theme: editorTheme(),
       automaticLayout: true,
       fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', Consolas, monospace",
       fontSize: useSettings.getState().fontSize,

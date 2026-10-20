@@ -86,7 +86,7 @@ test.describe('padrão PL/SQL da equipe', () => {
   test('formatador e sugestões usam minúsculas', async ({ page }) => {
     await typeLines(page, 'BEGIN\nNULL;\nEND;')
     await page.keyboard.press('Shift+Alt+F')
-    await expect.poll(() => editorText(page)).toMatch(/^begin\n\s+null;\n/)
+    await expect.poll(() => editorText(page)).toMatch(/^begin\n  --\n  null;\n  --\nend;/)
     await page.keyboard.press('Control+End')
     await page.keyboard.press('Shift+Enter')
     await page.keyboard.type('selec')
@@ -133,7 +133,7 @@ test.describe('caixa das palavras-chave PL/SQL (configurável)', () => {
     await page.keyboard.press('Delete')
     await typeLines(page, 'begin\nnull;\nend;')
     await page.keyboard.press('Shift+Alt+F')
-    await expect.poll(() => editorText(page)).toMatch(/^BEGIN\n\s+NULL;\nEND;/)
+    await expect.poll(() => editorText(page)).toMatch(/^BEGIN\n  --\n  NULL;\n  --\nEND;/)
   })
 })
 

@@ -87,3 +87,21 @@ test.describe('fonte do editor', () => {
     expect(withLigatures.equals(without)).toBe(false)
   })
 })
+
+test('tema: "Escuro moderno" é o padrão e "Carmesim" fica como opção nas configurações', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'modern')
+  await newProject(page, 'temas')
+  await createFiles(page, 'a.ts')
+  const editorBg = () => page.locator('.editor-host:not([hidden]) .monaco-editor-background').evaluate((el) => getComputedStyle(el).backgroundColor)
+  await expect.poll(editorBg).toBe('rgb(31, 31, 31)')
+
+  await page.getByRole('button', { name: 'Configurações' }).click()
+  await page.getByLabel('Tema').selectOption('carmesim')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'carmesim')
+  await expect.poll(editorBg).toBe('rgb(5, 5, 6)')
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(5, 5, 6)')
+
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'carmesim')
+})
