@@ -9,6 +9,40 @@ import { TauriFs } from '../fs/tauriFs'
 import { t as tr, useT } from '../i18n'
 import { IconClose } from './Icons'
 
+const TERMINAL_THEMES = {
+  carmesim: {
+    background: '#050506',
+    foreground: '#ece6e6',
+    cursor: '#ff6b6b',
+    selectionBackground: '#e5484d55',
+    black: '#0f0f12',
+    brightBlack: '#6a6366',
+    red: '#ff6b6b',
+    green: '#8fd3a8',
+    yellow: '#e6c587',
+    blue: '#7cb7ff',
+    magenta: '#ff8fa3',
+    cyan: '#7fd1c7',
+    white: '#ece6e6',
+  },
+  // Cores do terminal do VS Code (Dark Modern).
+  modern: {
+    background: '#1f1f1f',
+    foreground: '#cccccc',
+    cursor: '#aeafad',
+    selectionBackground: '#264f78',
+    black: '#000000',
+    brightBlack: '#666666',
+    red: '#cd3131',
+    green: '#0dbc79',
+    yellow: '#e5e510',
+    blue: '#2472c8',
+    magenta: '#bc3fbc',
+    cyan: '#11a8cd',
+    white: '#e5e5e5',
+  },
+}
+
 /**
  * Terminal integrado (só no app desktop). Fica montado mesmo quando escondido, para a
  * sessão do shell continuar viva entre aberturas do painel.
@@ -17,6 +51,7 @@ export default function TerminalPanel() {
   const t = useT()
   const visible = useWorkspace((s) => s.terminalVisible)
   const fontSize = useSettings((s) => s.fontSize)
+  const theme = useSettings((s) => s.theme)
   const host = useRef<HTMLDivElement>(null)
   const term = useRef<Terminal | null>(null)
   const fit = useRef<FitAddon | null>(null)
@@ -54,21 +89,7 @@ export default function TerminalPanel() {
       fontSize: useSettings.getState().fontSize,
       cursorBlink: !matchMedia('(prefers-reduced-motion: reduce)').matches,
       allowProposedApi: false,
-      theme: {
-        background: '#050506',
-        foreground: '#ece6e6',
-        cursor: '#ff6b6b',
-        selectionBackground: '#e5484d55',
-        black: '#0f0f12',
-        brightBlack: '#6a6366',
-        red: '#ff6b6b',
-        green: '#8fd3a8',
-        yellow: '#e6c587',
-        blue: '#7cb7ff',
-        magenta: '#ff8fa3',
-        cyan: '#7fd1c7',
-        white: '#ece6e6',
-      },
+      theme: TERMINAL_THEMES[useSettings.getState().theme],
     })
     const fitAddon = new FitAddon()
     xterm.loadAddon(fitAddon)
@@ -102,6 +123,10 @@ export default function TerminalPanel() {
     term.current.options.fontSize = fontSize
     fit.current?.fit()
   }, [fontSize])
+
+  useEffect(() => {
+    if (term.current) term.current.options.theme = TERMINAL_THEMES[theme]
+  }, [theme])
 
   // Fecha o shell ao sair da IDE.
   useEffect(() => () => void session.current?.close(), [])

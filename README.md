@@ -18,11 +18,12 @@ IDE leve e rápida, no estilo do VS Code, que roda **no navegador** e **no deskt
   O **Enter** monta o bloco (`if (…) then` → `--`, cursor, `--`, `end if;`; `procedure prc_x … is` → `end prc_x;`), separa comandos com `--` e
   reposiciona `begin`/`exception`; **Shift+Enter** é a quebra comum (para agrupar `open`/`fetch`/`close`).
   Depois de `registro.` o autocomplete mostra as colunas do cursor (`r c_cursor;`, `%rowtype`, `for r in c_cursor loop`).
+  O formatador (`Shift+Alt+F`) põe os `--` que faltam e alinha as listas de parâmetros (vírgula embaixo do `(`).
   Snippets (`proc`, `func`, `pkb`, `trg`, `if`, `forc`, `ofc`, `exc`, `merge`…) e formatador (`Shift+Alt+F`) no mesmo padrão.
 - **Projetos no navegador**, salvos no IndexedDB, ou **pastas do computador** (Chrome/Edge).
 - **Funciona offline**: instale como app pelo navegador (PWA). Nada é carregado de CDN.
   Quando sai versão nova, aparece **Nova versão · atualizar** na barra de status (pergunta antes pelo que não foi salvo).
-- Interface em **português e inglês**.
+- Interface em **português e inglês**. Temas **Escuro moderno** (cores do VS Code, padrão) e **Carmesim**, em Configurações → Tema.
 - **GitHub**: login (OAuth ou token pessoal), lista e clone dos seus repositórios, commit, push, pull,
   troca/criação de branches, diff lado a lado e descarte de alterações (`Ctrl+Shift+G`).
 
