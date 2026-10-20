@@ -8,7 +8,7 @@ IDE leve e rápida, no estilo do VS Code, que roda **no navegador** e **no deskt
 | --- | --- | --- |
 | 1 | Base: explorador, abas, editor Monaco, PL/SQL, PT/EN, PWA offline | ✅ |
 | 2 | GitHub: login OAuth, clonar, commit, push, pull, branches, diff | ✅ |
-| 3 | App desktop (Tauri) com terminal integrado | ⏳ |
+| 3 | App desktop (Tauri) com terminal integrado | ✅ |
 | 4 | Pull requests, paleta de comandos, busca nos arquivos | ⏳ |
 
 ## Recursos
@@ -22,6 +22,20 @@ IDE leve e rápida, no estilo do VS Code, que roda **no navegador** e **no deskt
 - **GitHub**: login (OAuth ou token pessoal), lista e clone dos seus repositórios, commit, push, pull,
   troca/criação de branches, diff lado a lado e descarte de alterações (`Ctrl+Shift+G`).
 
+## App desktop
+
+O mesmo código roda como app nativo (Tauri 2), sem internet:
+
+- **Pastas do computador** em qualquer sistema, pelo seletor nativo, com lista de pastas recentes.
+- **Terminal integrado** (bash/zsh/PowerShell) na pasta do projeto: `` Ctrl+` `` ou o botão *Terminal* na barra de status.
+- Git em pastas do computador pelo terminal (`git status`, `git commit`…).
+
+**Instaladores:** em *Actions → Desktop (instaladores) → Run workflow* (Windows `.msi`/`.exe`, macOS `.dmg`,
+Linux `.deb`/`.AppImage`), ou criando uma tag `v*` (vira um rascunho de release com os instaladores).
+
+**Desenvolvimento:** `npm run tauri dev` (precisa de Rust; no Linux também das bibliotecas do WebKitGTK).
+Testes do Rust: `cargo test --manifest-path src-tauri/Cargo.toml --lib`.
+
 ## Atalhos
 
 | Ação | Atalho |
@@ -31,6 +45,8 @@ IDE leve e rápida, no estilo do VS Code, que roda **no navegador** e **no deskt
 | Fechar aba | `Alt+W` |
 | Mostrar/ocultar barra lateral | `Ctrl+B` |
 | Comandos do editor | `F1` |
+| Terminal (desktop) | `` Ctrl+` `` |
+| Tab move o foco (sair do editor pelo teclado) | `Ctrl+M` |
 | Renomear / excluir no explorador | `F2` / `Del` |
 
 ## Desenvolvimento
@@ -76,5 +92,7 @@ Cada push na `main` publica a versão web no GitHub Pages
 - `src/github/` — login OAuth, API do GitHub.
 - `src/store/` — estado global (Zustand): projeto aberto, árvore, abas, git, configurações.
 - `worker/` — Cloudflare Worker (login + proxy do git).
+- `src-tauri/` — app desktop em Rust: `workspace.rs` (arquivos, sem sair da pasta do projeto), `terminal.rs`
+  (pseudoterminal), `lib.rs` (comandos expostos à interface).
 - `e2e/` — testes de interface; `e2e/fixtures.ts` simula o GitHub com um repositório git local.
 - `src/components/` — interface. O editor é carregado sob demanda para a IDE abrir instantaneamente.

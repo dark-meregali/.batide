@@ -14,3 +14,7 @@ playwright-report
 .github/skills/
 .github/agents/
 .github/hooks/
+
+# Tauri
+src-tauri/target
+src-tauri/gen

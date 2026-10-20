@@ -48,6 +48,8 @@ interface WorkspaceState {
   narrow: boolean
   /** Editor no modo "Tab move o foco" (Ctrl+M) em vez de indentar. */
   tabFocus: boolean
+  /** Painel de terminal aberto (só no app desktop). */
+  terminalVisible: boolean
   toast: string | null
   dialog: Dialog
   editing: Editing
@@ -76,6 +78,7 @@ interface WorkspaceState {
   toggleSidebar: () => void
   notify: (msg: string) => void
   setDialog: (dialog: Dialog) => void
+  setTerminal: (visible: boolean) => void
 }
 
 const isUnder = (p: string, dir: string) => p === dir || p.startsWith(dir + '/')
@@ -97,6 +100,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     sidebarView: 'explorer',
     narrow: false,
     tabFocus: false,
+    terminalVisible: false,
     toast: null,
     dialog: null,
     editing: null,
@@ -305,6 +309,10 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
 
     toggleSidebar() {
       set((s) => ({ sidebarVisible: !s.sidebarVisible }))
+    },
+
+    setTerminal(terminalVisible) {
+      set({ terminalVisible })
     },
 
     setDialog(dialog) {

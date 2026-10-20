@@ -13,6 +13,8 @@ export interface Settings {
   sidebarWidth: number
   /** URL do Cloudflare Worker (login OAuth + proxy do git). */
   proxyUrl: string
+  /** Pastas do computador abertas no app desktop, mais recentes primeiro. */
+  recentFolders: string[]
   set: (patch: Partial<Omit<Settings, 'set'>>) => void
 }
 
@@ -30,6 +32,7 @@ export const useSettings = create<Settings>()(
       autoSave: false,
       sidebarWidth: 260,
       proxyUrl: '',
+      recentFolders: [],
       set: (patch) => set(patch),
     }),
     { name: 'batide.settings' },

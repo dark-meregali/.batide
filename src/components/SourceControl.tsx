@@ -4,6 +4,8 @@ import { useAuth } from '../github/auth'
 import { useT } from '../i18n'
 import { IconArrowDown, IconArrowUp, IconBranch, IconGithub, IconRefresh, IconUndo } from './Icons'
 import { FileIcon } from './FileIcon'
+import { isTauri } from '../platform'
+import { BrowserFs } from '../fs/browserFs'
 
 export { GIT_STATUS_COLORS as STATUS_COLORS } from '../ui/gitColors'
 import { GIT_STATUS_COLORS as STATUS_COLORS } from '../ui/gitColors'
@@ -13,16 +15,30 @@ export function SourceControl({ onPickBranch }: { onPickBranch: () => void }) {
   const git = useGit()
   const token = useAuth((s) => s.token)
   const ws = useWorkspace.getState()
+  const fs = useWorkspace((s) => s.fs)
 
   if (!git.isRepo) {
     return (
       <div className="scm">
         <div className="sidebar-header"><span className="sidebar-title">{t('git.title')}</span></div>
         <div className="scm-body">
-          <p className="scm-empty">{t('git.notRepoShort')}</p>
-          <button className="btn-primary" disabled={!!git.busy} onClick={() => git.init()}>
-            {t('git.init')}
-          </button>
+          {isTauri() && fs?.kind === 'local' ? (
+            <>
+              <p className="scm-empty">{t('git.localUseTerminal')}</p>
+              <button className="btn-primary" onClick={() => ws.setTerminal(true)}>
+                {t('git.openTerminal')}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="scm-empty">{t('git.notRepoShort')}</p>
+              {fs instanceof BrowserFs && (
+                <button className="btn-primary" disabled={!!git.busy} onClick={() => git.init()}>
+                  {t('git.init')}
+                </button>
+              )}
+            </>
+          )}
           <button className="btn-secondary" onClick={() => ws.setDialog('clone')}>
             <IconGithub size={14} /> {t('git.cloneInstead')}
           </button>
